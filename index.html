@@ -3199,12 +3199,13 @@
         }
 
         function criarSelectInteligenteMobile(elemento) {
-            if (!elemento || elemento.tomselect || typeof TomSelect === 'undefined' || window.innerWidth >= 992) return elemento?.tomselect || null;
+            if (!elemento || elemento.tomselect || elemento.dataset.smartSelectConfigurado || elemento.classList.contains('mobile-smart-select-source') || typeof TomSelect === 'undefined' || window.innerWidth >= 992) return elemento?.tomselect || null;
             return new TomSelect(elemento, { create: false, sortField: { field: 'text', direction: 'asc' }, placeholder: 'Digite para pesquisar...', maxOptions: 50, searchField: ['text'], diacritics: true, openOnFocus: true, dropdownParent: 'body', closeAfterSelect: true });
         }
         function aplicarPesquisaInteligenteMobile() {
             if (window.innerWidth >= 992) return;
             document.querySelectorAll('select').forEach(elemento => {
+                if (elemento.dataset.smartSelectConfigurado || elemento.classList.contains('mobile-smart-select-source')) return;
                 const quantidadeOpcoes = Array.from(elemento.options).filter(opcao => String(opcao.value) !== '').length;
                 if (quantidadeOpcoes > 8) criarSelectInteligenteMobile(elemento);
                 else if (elemento.tomselect) { const valorAtual = elemento.tomselect.getValue(); elemento.tomselect.destroy(); elemento.value = valorAtual; }
@@ -3215,7 +3216,7 @@
             if (!elemento) return;
             
             const dadosParaExibirAntesDoFiltro = filtroFn ? dados.filter(filtroFn) : dados;
-            if (window.innerWidth < 992 && dadosParaExibirAntesDoFiltro.length > 8) criarSelectInteligenteMobile(elemento);
+            if (window.innerWidth < 992 && !elemento.dataset.smartSelectConfigurado && !elemento.classList.contains('mobile-smart-select-source') && dadosParaExibirAntesDoFiltro.length > 8) criarSelectInteligenteMobile(elemento);
             let ts = elemento.tomselect;
             
             if (ts) {
