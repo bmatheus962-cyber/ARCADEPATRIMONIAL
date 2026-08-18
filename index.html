@@ -281,6 +281,24 @@
         .dark-mode .ts-dropdown .option:hover, .dark-mode .ts-dropdown .option.active { background-color: #2d3a4f; color: #ffffff; }
         .dark-mode .ts-control input { color: #ffffff; }
         .dark-mode .ts-control .item { color: #ffffff; }
+
+        /* Padrão visual dos campos de pesquisa no mobile */
+        @media (max-width: 991.98px) {
+            #darkModeToggleDesktop { display: none !important; }
+            .form-control, .form-select, .ts-wrapper .ts-control {
+                background-color: var(--input-bg) !important;
+                color: var(--text-main) !important;
+                border-color: var(--input-border) !important;
+                opacity: 1 !important;
+            }
+            .form-control::placeholder, .ts-control input::placeholder { color: var(--text-muted) !important; opacity: 1 !important; }
+            .form-control:focus, .form-select:focus, .ts-wrapper.focus .ts-control, .ts-control.focus { background-color: var(--input-bg) !important; color: var(--text-main) !important; border-color: var(--primary-color) !important; box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15) !important; }
+            .ts-control input, .ts-control .item { color: var(--text-main) !important; background: transparent !important; }
+            .ts-dropdown { background-color: var(--bg-card) !important; color: var(--text-main) !important; border-color: var(--border-color) !important; }
+            .ts-dropdown .option { color: var(--text-main) !important; background-color: var(--bg-card) !important; }
+            .ts-dropdown .option:hover, .ts-dropdown .option.active { color: #ffffff !important; background-color: var(--primary-color) !important; }
+            .ts-control.disabled, .form-select:disabled, .form-control:disabled { background-color: var(--bg-body) !important; color: var(--text-muted) !important; opacity: 1 !important; }
+        }
         .dark-mode .notif-status { color: #94a3b8 !important; }
         .dark-mode .notif-item .text-danger { color: #fca5a5 !important; }
         .dark-mode .notif-item .text-muted { color: #94a3b8 !important; }
@@ -526,6 +544,14 @@
         .mobile-smart-select-list { position: absolute; z-index: 1080; left: 0; right: 0; max-height: 240px; overflow-y: auto; background: var(--bs-body-bg, #fff); border: 1px solid rgba(148,163,184,.45); border-radius: .375rem; box-shadow: 0 .5rem 1rem rgba(0,0,0,.18); }
         .mobile-smart-select-option { display: block; width: 100%; padding: .65rem .75rem; border: 0; background: transparent; text-align: left; color: inherit; }
         .mobile-smart-select-option:hover, .mobile-smart-select-option:focus { background: rgba(59,130,246,.15); }
+        @media (max-width: 991.98px) {
+            .mobile-smart-select-input { background-color: var(--input-bg) !important; color: var(--text-main) !important; border-color: var(--input-border) !important; }
+            .mobile-smart-select-input::placeholder { color: var(--text-muted) !important; opacity: 1 !important; }
+            .mobile-smart-select-list { background: var(--bg-card) !important; color: var(--text-main) !important; border-color: var(--border-color) !important; }
+            .mobile-smart-select-option { color: var(--text-main) !important; background: var(--bg-card) !important; }
+            .mobile-smart-select-option:hover, .mobile-smart-select-option:focus { color: #ffffff !important; background: var(--primary-color) !important; }
+            .mobile-smart-select-option strong { color: inherit !important; font-weight: 800; }
+        }
         .inventario-atrasado { border-left: 4px solid #dc3545 !important; }
         .inventario-alerta { color: #dc3545 !important; font-weight: 700; }
         .inventario-alerta-icon { color: #dc3545; margin-right: .35rem; }
@@ -2562,10 +2588,17 @@
                 const savedPic = localStorage.getItem('profilePic_' + loggedUser.uid) || localStorage.getItem('profilePic_' + loggedUser.username);
                 imagemPerfil.src = savedPic || loggedUser.profilePhoto || fotoPadrao;
                 if (loggedUser.uid && typeof db !== 'undefined') {
-                    db.collection('users').doc(loggedUser.uid).get().then(doc => {
+                    if (typeof window.desinscreverFotoPerfil === 'function') window.desinscreverFotoPerfil();
+                    window.desinscreverFotoPerfil = db.collection('users').doc(loggedUser.uid).onSnapshot(doc => {
                         const fotoBanco = doc.exists ? doc.data().profilePhoto : '';
-                        if (fotoBanco) { imagemPerfil.src = fotoBanco; localStorage.setItem('profilePic_' + loggedUser.uid, fotoBanco); }
-                    }).catch(error => console.warn('Não foi possível carregar a foto de perfil:', error));
+                        if (fotoBanco && fotoBanco !== imagemPerfil.src) {
+                            imagemPerfil.src = fotoBanco;
+                            localStorage.setItem('profilePic_' + loggedUser.uid, fotoBanco);
+                            const sessaoAtual = JSON.parse(sessionStorage.getItem('loggedUser')) || {};
+                            sessaoAtual.profilePhoto = fotoBanco;
+                            sessionStorage.setItem('loggedUser', JSON.stringify(sessaoAtual));
+                        }
+                    }, error => console.warn('Não foi possível sincronizar a foto de perfil:', error));
                 }
             }
         }
