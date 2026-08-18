@@ -353,7 +353,7 @@
         .sidebar .nav-link.active { color: #fff; background: linear-gradient(90deg, var(--primary-color), var(--primary-hover)); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
         .logout-btn { background-color: rgba(239, 68, 68, 0.1) !important; color: var(--accent-color) !important; margin-top: auto; border: 1px solid rgba(239, 68, 68, 0.2); }
         .logout-btn:hover { background-color: var(--accent-color) !important; color: white !important; }
-        @media (max-width: 991.98px) { .mobile-navbar { display: flex; } .sidebar { transform: translateX(-100%); } .sidebar.show { transform: translateX(0); } .sidebar-overlay.show { display: block; } .main-content-wrapper { margin-left: 0; padding: 1.5rem 1rem; } .dark-mode-toggle { bottom: 1.5rem; right: 1.5rem; } }
+        @media (max-width: 991.98px) { .mobile-navbar { display: flex; } .sidebar { transform: translateX(-100%); } .sidebar.show { transform: translateX(0); } .sidebar-overlay.show { display: block; } .main-content-wrapper { margin-left: 0; padding: 1.5rem 1rem; } .dark-mode-toggle { display: none !important; } }
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(10px); }
         #login-box { background: rgba(255, 255, 255, 0.95); padding: 2.5rem; border-radius: var(--radius-lg); width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25); border: 1px solid rgba(255,255,255,0.2); position: relative; overflow: hidden; }
         .dark-mode #login-box { background: rgba(30, 41, 59, 0.95); border: 1px solid rgba(255,255,255,0.05); }
@@ -486,9 +486,9 @@
         #btnVirarCamera:active i { transform: rotate(180deg); }
         .main-app-container, .main-content-wrapper { max-width: 100%; overflow-x: hidden; }
         @media (max-width: 575.98px) { [class*="modal-dialog"][style*="max-width"] { max-width: calc(100vw - 1.5rem) !important; } .modal-dialog.modal-xl, .modal-dialog.modal-lg { margin: 0; max-width: 100vw !important; max-height: 100dvh; } .modal-dialog.modal-xl .modal-content, .modal-dialog.modal-lg .modal-content { border-radius: 0; max-height: 100dvh; overflow-y: auto; } .card-body.p-5 { padding: 1.25rem !important; } .card-body.p-4 { padding: 1rem !important; } .toast { min-width: calc(100vw - 2rem); max-width: calc(100vw - 2rem); } .input-group.input-group-lg > .form-control { font-size: 1rem; } #paginacaoBens, #paginacaoConsulta { flex-direction: column; align-items: flex-start !important; gap: 0.5rem; } #baixa-section .card-body, #movimentacoes-section .card-body { padding: 1rem !important; } #listaPlaquetas, #listaBaixas, #listaMovimentacoes { max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch; } #consulta-section .card .row.g-3 > [class*="col-"] { flex: 0 0 100%; max-width: 100%; } #consulta-section .card .row.g-3 .btn { width: 100%; } #modalBem .col-md-6, #modalBem .col-md-4, #modalBem .col-md-3, #modalBem .col-md-2, #modalBem .col-md-8 { flex: 0 0 100%; max-width: 100%; } #relatorios-section .col-md-6, #relatorios-section .col-md-4, #relatorios-section .col-md-3, #relatorios-section .col-md-12 { flex: 0 0 100%; max-width: 100%; } .btn.btn-sm { font-size: 0.7rem; padding: 0.25rem 0.4rem; } #rankingDia { width: 90px !important; } #rankingMes { width: 130px !important; } }
-        @media (max-width: 767px) { #bens-section .table thead th:nth-child(3), #bens-section .table thead th:nth-child(4), #bens-section .table thead th:nth-child(5), #bens-section .table thead th:nth-child(6), #bens-section .table tbody td:nth-child(3), #bens-section .table tbody td:nth-child(4), #bens-section .table tbody td:nth-child(5), #bens-section .table tbody td:nth-child(6) { display: none; } #consulta-section .table thead th:nth-child(3), #consulta-section .table thead th:nth-child(5), #consulta-section .table thead th:nth-child(6), #consulta-section .table tbody td:nth-child(3), #consulta-section .table tbody td:nth-child(5), #consulta-section .table tbody td:nth-child(6) { display: none; } #cadastrosTabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } #cadastrosTabs::-webkit-scrollbar { display: none; } #cadastrosTabs .nav-item { flex-shrink: 0; } .modal-dialog { max-height: 95vh; } .modal-content { max-height: 95vh; overflow-y: auto; } #inventario-section .col-md-4, #inventario-section .col-md-2, #inventario-section .col-md-6, #inventario-section .col-md-8 { flex: 0 0 100%; max-width: 100%; } #planejamento-section .col-md-2, #planejamento-section .col-md-4, #planejamento-section .col-md-6 { flex: 0 0 100%; max-width: 100%; } #localidades-section .col-md-6, #localidades-section .col-md-4, #localidades-section .col-md-3 { flex: 0 0 100%; max-width: 100%; } .nav-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } .nav-tabs::-webkit-scrollbar { display: none; } .nav-tabs .nav-item { flex-shrink: 0; } #consulta-section .table-responsive, #inventario-section .table-responsive, #baixa-section .table-responsive, #movimentacoes-section .table-responsive { -webkit-overflow-scrolling: touch; } #listaDisponiveis, #containerMesesPlanejamento { max-height: 38vh !important; overflow-y: auto; -webkit-overflow-scrolling: touch; } #planejamento-section .col-md-2.d-flex { flex-direction: column !important; justify-content: flex-start !important; align-items: stretch !important; gap: 1rem; padding: 1rem 0 !important; } #planejamento-section .col-md-2.d-flex > .card { flex: 1 1 auto; margin-bottom: 0 !important; width: 100% !important; } #planejamento-section .col-md-2.d-flex > #btnRemoverDoPlanejado { flex-shrink: 0; width: 100% !important; } }
+        @media (max-width: 767px) { #bens-section .table thead th:nth-child(3), #bens-section .table thead th:nth-child(4), #bens-section .table thead th:nth-child(5), #bens-section .table thead th:nth-child(6), #bens-section .table tbody td:nth-child(3), #bens-section .table tbody td:nth-child(4), #bens-section .table tbody td:nth-child(5), #bens-section .table tbody td:nth-child(6) { display: none; } #consulta-section .table thead th:nth-child(3), #consulta-section .table thead th:nth-child(5), #consulta-section .table thead th:nth-child(6), #consulta-section .table tbody td:nth-child(3), #consulta-section .table tbody td:nth-child(5), #consulta-section .table tbody td:nth-child(6) { display: none; } #cadastrosTabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } #cadastrosTabs::-webkit-scrollbar { display: none; } #cadastrosTabs .nav-item { flex-shrink: 0; } .modal-dialog { max-height: 95vh; } .modal-content { max-height: 95vh; overflow-y: auto; } #inventario-section .col-md-4, #inventario-section .col-md-2, #inventario-section .col-md-6, #inventario-section .col-md-8 { flex: 0 0 100%; max-width: 100%; } #planejamento-section .col-md-2, #planejamento-section .col-md-4, #planejamento-section .col-md-6 { flex: 0 0 100%; max-width: 100%; } #localidades-section .col-md-6, #localidades-section .col-md-4, #localidades-section .col-md-3 { flex: 0 0 100%; max-width: 100%; } .nav-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; } .nav-tabs::-webkit-scrollbar { display: none; } .nav-tabs .nav-item { flex-shrink: 0; } #consulta-section .table-responsive, #inventario-section .table-responsive, #baixa-section .table-responsive, #movimentacoes-section .table-responsive { -webkit-overflow-scrolling: touch; } #listaDisponiveis, #containerMesesPlanejamento { max-height: 38vh !important; overflow-y: auto; -webkit-overflow-scrolling: touch; } #planejamento-section .col-md-2.d-flex { flex-direction: column !important; justify-content: flex-start !important; align-items: stretch !important; gap: 1rem; padding: 1rem 0 !important; } #planejamento-section .col-md-2.d-flex > .card { flex: 1 1 auto; margin-bottom: 0 !important; width: 100% !important; } #planejamento-section .col-md-2.d-flex > #btnRemoverDoPlanejado { flex-shrink: 0; width: 50% !important; align-self: center; } }
         @media (max-width: 575px) { #bens-section .table { min-width: 240px; } #bens-section .table thead th, #bens-section .table tbody td { font-size: 0.8rem; padding: 0.5rem 0.4rem; } #consulta-section .table thead th:nth-child(4), #consulta-section .table tbody td:nth-child(4) { display: none; } #consulta-section .table { min-width: 240px; } #consulta-section .table thead th, #consulta-section .table tbody td { font-size: 0.8rem; padding: 0.5rem 0.4rem; } }
-        @media (max-width: 576px) { #dashboard-section > .d-flex:first-child { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #dashboard-section > .d-flex:first-child > .d-flex { width: 100%; justify-content: space-between; } .stat-number { font-size: 1.75rem; } .stat-card { padding: 1rem; } .card-body.p-4 { padding: 1rem !important; } .card-body.p-3 { padding: 0.75rem !important; } #bens-section > .d-flex:first-child { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #bens-section > .d-flex:first-child .d-flex { width: 100%; flex-wrap: wrap; } #bens-section > .d-flex:first-child .btn { flex: 1 1 auto; } #bens-section .card .row.g-3 > .col-12.col-md-2:last-child .btn { width: 100%; } .modal-dialog { margin: 0.5rem; max-width: calc(100vw - 1rem); } .modal-dialog.modal-lg, .modal-dialog.modal-xl { max-width: calc(100vw - 1rem); } .modal-body { padding: 1rem; } .modal-footer { flex-wrap: wrap; gap: 0.5rem; } .modal-footer .btn { flex: 1 1 auto; } #planejamento-section .d-flex.justify-content-between { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #planejamento-section .col-md-2.d-flex { flex-direction: column !important; gap: 0.75rem !important; width: 100% !important; } #planejamento-section .col-md-2 .card { width: 100% !important; } #planejamento-section .col-md-2 #btnRemoverDoPlanejado { width: 100% !important; } .d-flex.justify-content-between.align-items-center.mb-4 { flex-wrap: wrap; gap: 0.5rem; } .progress-info { flex-direction: column; gap: 0.25rem; } #inventario-section .d-flex.gap-2, #baixa-section .d-flex.gap-2, #movimentacoes-section .d-flex.gap-2, #relatorios-section .d-flex.gap-2 { flex-wrap: wrap; } #inventario-section .d-flex.gap-2 .btn, #baixa-section .d-flex.gap-2 .btn, #movimentacoes-section .d-flex.gap-2 .btn, #relatorios-section .d-flex.gap-2 .btn { flex: 1 1 auto; } #rankingContainer .ranking-item { flex-wrap: wrap; gap: 0.25rem; } .ano-container { padding: 0.35rem 0.5rem !important; } 
+        @media (max-width: 576px) { #btnMoverParaPlanejado, #btnRemoverDoPlanejado { width: 50% !important; align-self: center; } #dashboard-section > .d-flex:first-child { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #dashboard-section > .d-flex:first-child > .d-flex { width: 100%; justify-content: space-between; } .stat-number { font-size: 1.75rem; } .stat-card { padding: 1rem; } .card-body.p-4 { padding: 1rem !important; } .card-body.p-3 { padding: 0.75rem !important; } #bens-section > .d-flex:first-child { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #bens-section > .d-flex:first-child .d-flex { width: 100%; flex-wrap: wrap; } #bens-section > .d-flex:first-child .btn { flex: 1 1 auto; } #bens-section .card .row.g-3 > .col-12.col-md-2:last-child .btn { width: 100%; } .modal-dialog { margin: 0.5rem; max-width: calc(100vw - 1rem); } .modal-dialog.modal-lg, .modal-dialog.modal-xl { max-width: calc(100vw - 1rem); } .modal-body { padding: 1rem; } .modal-footer { flex-wrap: wrap; gap: 0.5rem; } .modal-footer .btn { flex: 1 1 auto; } #planejamento-section .d-flex.justify-content-between { flex-direction: column; align-items: flex-start !important; gap: 0.75rem; } #planejamento-section .col-md-2.d-flex { flex-direction: column !important; gap: 0.75rem !important; width: 100% !important; } #planejamento-section .col-md-2 .card { width: 100% !important; } #planejamento-section .col-md-2 #btnRemoverDoPlanejado { width: 50% !important; align-self: center; } .d-flex.justify-content-between.align-items-center.mb-4 { flex-wrap: wrap; gap: 0.5rem; } .progress-info { flex-direction: column; gap: 0.25rem; } #inventario-section .d-flex.gap-2, #baixa-section .d-flex.gap-2, #movimentacoes-section .d-flex.gap-2, #relatorios-section .d-flex.gap-2 { flex-wrap: wrap; } #inventario-section .d-flex.gap-2 .btn, #baixa-section .d-flex.gap-2 .btn, #movimentacoes-section .d-flex.gap-2 .btn, #relatorios-section .d-flex.gap-2 .btn { flex: 1 1 auto; } #rankingContainer .ranking-item { flex-wrap: wrap; gap: 0.25rem; } .ano-container { padding: 0.35rem 0.5rem !important; } 
 .ano-container label { font-size: 0.75rem !important; margin-right: 0.25rem !important; }
 #filtroAnoDashboard { width: 90px !important; font-size: 0.85rem !important; } #anoPlanejamento { width: 100% !important; } .mes-header { font-size: 0.8rem; } .item-planejado { font-size: 0.8rem; padding: 8px 8px; } }
         @media (max-width: 991.98px) { .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; } .nav-link { min-height: 44px; } .form-control, .form-select { min-height: 44px; font-size: 1rem; } select, input, textarea { font-size: 1rem !important; } .mobile-navbar { padding: 0.75rem 1rem; } .mobile-notif-slot { display: flex; align-items: center; } .dark-mode-toggle { display: none !important; } .sidebar .nav-link { min-height: 48px; } #notifDropdown.show { position: fixed !important; top: 56px; left: 50% !important; right: auto !important; transform: translateX(-50%); width: calc(100vw - 2rem); max-width: 500px; z-index: 1060; box-shadow: 0 8px 24px rgba(0,0,0,0.25); max-height: 80vh; overflow-y: auto; } }
@@ -2379,8 +2379,9 @@
                 verificarPermissoesAdmin();
                 displayUserInfo();
                 carregarFiltrosRanking();
+                setTimeout(aplicarPesquisaInteligenteMobile, 0);
 
-		// ----> ADICIONE ESTA LINHA AQUI <----
+			// ----> ADICIONE ESTA LINHA AQUI <----
        		verificarRelatorioViaUrl();
 
                 // 2. Tudo pronto! Libera a tela para o usuário usar o sistema
@@ -2417,11 +2418,13 @@
                 if (el) new TomSelect(el, tsConfig); 
             };
             
-            // Aplicação nos 4 campos solicitados
-            initTS('filtroLocal');
-            initTS('filtroLocalConsulta');
-            initTS('inventarioLocalizacao');
-            initTS('movimentacaoLocalidade');
+            // No desktop, preservar os campos já aprimorados com Tom Select. No mobile, a escolha é feita pelo volume de opções.
+            if (window.innerWidth >= 992) {
+                initTS('filtroLocal');
+                initTS('filtroLocalConsulta');
+                initTS('inventarioLocalizacao');
+                initTS('movimentacaoLocalidade');
+            }
 
             // MOBILE SIDEBAR TOGGLE
             const toggleBtn = document.getElementById('sidebarToggle');
@@ -2501,6 +2504,28 @@
             return String(texto ?? '').replace(/[&<>"']/g, caractere => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[caractere]);
         }
 
+        function prepararFotoPerfil(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = evento => {
+                    const imagem = new Image();
+                    imagem.onload = () => {
+                        const limite = 320;
+                        const escala = Math.min(1, limite / Math.max(imagem.width, imagem.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, Math.round(imagem.width * escala));
+                        canvas.height = Math.max(1, Math.round(imagem.height * escala));
+                        canvas.getContext('2d').drawImage(imagem, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.82));
+                    };
+                    imagem.onerror = reject;
+                    imagem.src = evento.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         function displayUserInfo() {
             const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
             if (loggedUser && loggedUser.username) {
@@ -2532,8 +2557,16 @@
                         }).catch(error => { console.error("Erro ao atualizar nome no Firestore:", error); exibirToast('Erro ao atualizar nome no banco de dados.', 'danger'); });
                     }
                 };
-                const savedPic = localStorage.getItem('profilePic_' + loggedUser.username);
-                document.getElementById('profile-pic').src = savedPic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                const imagemPerfil = document.getElementById('profile-pic');
+                const fotoPadrao = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+                const savedPic = localStorage.getItem('profilePic_' + loggedUser.uid) || localStorage.getItem('profilePic_' + loggedUser.username);
+                imagemPerfil.src = savedPic || loggedUser.profilePhoto || fotoPadrao;
+                if (loggedUser.uid && typeof db !== 'undefined') {
+                    db.collection('users').doc(loggedUser.uid).get().then(doc => {
+                        const fotoBanco = doc.exists ? doc.data().profilePhoto : '';
+                        if (fotoBanco) { imagemPerfil.src = fotoBanco; localStorage.setItem('profilePic_' + loggedUser.uid, fotoBanco); }
+                    }).catch(error => console.warn('Não foi possível carregar a foto de perfil:', error));
+                }
             }
         }
 
@@ -3132,9 +3165,24 @@
             }
         }
 
+        function criarSelectInteligenteMobile(elemento) {
+            if (!elemento || elemento.tomselect || typeof TomSelect === 'undefined' || window.innerWidth >= 992) return elemento?.tomselect || null;
+            return new TomSelect(elemento, { create: false, sortField: { field: 'text', direction: 'asc' }, placeholder: 'Digite para pesquisar...', maxOptions: 50, searchField: ['text'], diacritics: true, openOnFocus: true, dropdownParent: 'body', closeAfterSelect: true });
+        }
+        function aplicarPesquisaInteligenteMobile() {
+            if (window.innerWidth >= 992) return;
+            document.querySelectorAll('select').forEach(elemento => {
+                const quantidadeOpcoes = Array.from(elemento.options).filter(opcao => String(opcao.value) !== '').length;
+                if (quantidadeOpcoes > 8) criarSelectInteligenteMobile(elemento);
+                else if (elemento.tomselect) { const valorAtual = elemento.tomselect.getValue(); elemento.tomselect.destroy(); elemento.value = valorAtual; }
+            });
+        }
+
         function popularSelectInteligente(elemento, dados, filtroFn, textoPadrao) {
             if (!elemento) return;
             
+            const dadosParaExibirAntesDoFiltro = filtroFn ? dados.filter(filtroFn) : dados;
+            if (window.innerWidth < 992 && dadosParaExibirAntesDoFiltro.length > 8) criarSelectInteligenteMobile(elemento);
             let ts = elemento.tomselect;
             
             if (ts) {
@@ -3149,7 +3197,8 @@
                 elemento.appendChild(optPadrao);
             }
 
-            var dadosParaExibir = filtroFn ? dados.filter(filtroFn) : dados;
+            var dadosParaExibir = dadosParaExibirAntesDoFiltro;
+            if (window.innerWidth < 992 && dadosParaExibir.length <= 8 && ts) { const valorAtual = ts.getValue(); ts.destroy(); elemento.value = valorAtual; ts = null; }
             var ordenados = dadosParaExibir.slice().sort(function(a, b) {
                 var nomeA = a.nome ? a.nome.toString().toLowerCase() : '';
                 var nomeB = b.nome ? b.nome.toString().toLowerCase() : '';
@@ -3678,14 +3727,20 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             document.getElementById('profile-pic-input')?.addEventListener('change', function(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imageDataUrl = e.target.result;
+                const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
+                prepararFotoPerfil(file).then(imageDataUrl => {
                     document.getElementById('profile-pic').src = imageDataUrl;
-                    const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
-                    if (loggedUser && loggedUser.username) localStorage.setItem('profilePic_' + loggedUser.username, imageDataUrl);
-                };
-                reader.readAsDataURL(file);
+                    if (loggedUser?.uid) {
+                        localStorage.setItem('profilePic_' + loggedUser.uid, imageDataUrl);
+                        db.collection('users').doc(loggedUser.uid).update({ profilePhoto: imageDataUrl }).then(() => {
+                            const sessaoAtual = JSON.parse(sessionStorage.getItem('loggedUser')) || {};
+                            sessaoAtual.profilePhoto = imageDataUrl;
+                            sessionStorage.setItem('loggedUser', JSON.stringify(sessaoAtual));
+                            exibirToast('Foto de perfil salva com sucesso.', 'success');
+                        }).catch(error => { console.error('Erro ao salvar foto de perfil:', error); exibirToast('A foto foi aplicada neste dispositivo, mas não pôde ser sincronizada.', 'warning'); });
+                    }
+                }).catch(error => { console.error('Erro ao preparar foto de perfil:', error); exibirToast('Não foi possível carregar essa imagem.', 'danger'); });
+                event.target.value = '';
             });
 
             // FILTROS EM CASCATA
