@@ -1478,8 +1478,8 @@
                         <div class="tab-pane fade" id="controle-contabil" role="tabpanel">
                             <form id="formBemContabil">
                                 <div class="row"><div class="col-md-6"><div class="mb-3"><label for="gerencialBem" class="form-label">Gerencial (Centro de Custo) <span class="text-danger">*</span></label><select class="form-select" id="gerencialBem" required><option value="">Selecione um gerencial</option></select></div></div><div class="col-md-6"><div class="mb-3"><label for="contaPatrimonial" class="form-label">Conta Patrimonial <span class="text-danger">*</span></label><select class="form-select" id="contaPatrimonial" required><option value="">Selecione a conta patrimonial</option></select></div></div></div>
-                                <div class="row"><div class="col-md-3"><div class="mb-3"><label for="dataAquisicao" class="form-label">Data de Aquisição <span class="text-danger">*</span></label><input type="date" class="form-control" id="dataAquisicao" required></div></div><div class="col-md-3"><div class="mb-3"><label for="dataInstalacao" class="form-label">Data de Instalação <span class="text-danger">*</span></label><input type="date" class="form-control" id="dataInstalacao" required></div></div><div class="col-md-3"><div class="mb-3"><label for="cnpjFornecedorBem" class="form-label">CNPJ Fornecedor <span class="text-danger">*</span></label><input type="text" class="form-control" id="cnpjFornecedorBem" placeholder="00.000.000/0000-00" required></div></div><div class="col-md-3"><div class="mb-3"><label for="fornecedorBem" class="form-label">Fornecedor <span class="text-danger">*</span></label><input type="text" class="form-control" id="fornecedorBem" readonly required></div></div></div>
-                                <div class="row"><div class="col-md-4"><div class="mb-3"><label for="numeroNotaFiscal" class="form-label">Número da Nota Fiscal <span class="text-danger">*</span></label><input type="text" class="form-control" id="numeroNotaFiscal" required></div></div><div class="col-md-4"><div class="mb-3"><label for="valorAquisicaoBem" class="form-label">Valor de Aquisição <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">R$</span><input type="text" class="form-control" id="valorAquisicaoBem" placeholder="0,00" required></div></div></div><div class="col-md-4"><div class="mb-3"><label for="dataBaixa" class="form-label">Data de Baixa</label><input type="date" class="form-control" id="dataBaixa" disabled></div></div></div>
+                                <div class="row"><div class="col-md-3"><div class="mb-3"><label for="dataAquisicao" class="form-label">Data de Aquisição</label><input type="date" class="form-control" id="dataAquisicao"></div></div><div class="col-md-3"><div class="mb-3"><label for="dataInstalacao" class="form-label">Data de Instalação</label><input type="date" class="form-control" id="dataInstalacao"></div></div><div class="col-md-3"><div class="mb-3"><label for="cnpjFornecedorBem" class="form-label">CNPJ Fornecedor</label><input type="text" class="form-control" id="cnpjFornecedorBem" placeholder="00.000.000/0000-00"></div></div><div class="col-md-3"><div class="mb-3"><label for="fornecedorBem" class="form-label">Fornecedor</label><input type="text" class="form-control" id="fornecedorBem" readonly></div></div></div>
+                                <div class="row"><div class="col-md-4"><div class="mb-3"><label for="numeroNotaFiscal" class="form-label">Número da Nota Fiscal</label><input type="text" class="form-control" id="numeroNotaFiscal"></div></div><div class="col-md-4"><div class="mb-3"><label for="valorAquisicaoBem" class="form-label">Valor de Aquisição</label><div class="input-group"><span class="input-group-text">R$</span><input type="text" class="form-control" id="valorAquisicaoBem" placeholder="0,00"></div></div></div><div class="col-md-4"><div class="mb-3"><label for="dataBaixa" class="form-label">Data de Baixa</label><input type="date" class="form-control" id="dataBaixa" disabled></div></div></div>
                             </form>
                         </div>
                         <div class="tab-pane fade" id="foto-bem" role="tabpanel">
@@ -3359,7 +3359,7 @@
                     opt.textContent = item.nome;
                     elemento.appendChild(opt);
                 });
-                elemento.disabled = false;
+                elemento.disabled = dadosParaExibir.length === 0;
             }
         }
 
@@ -3926,7 +3926,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
                 });
                 invUnidade.addEventListener('change', function() { aplicarCascataReversa(this.value, invLocal, invImovel); });
                 popularSelectInteligente(invLocal, localidades, null, "Selecionar Localização");
-                popularSelectInteligente(invUnidade, unidades, null, "Selecionar Unidade");
+                popularSelectInteligente(invUnidade, unidades, () => false, "Selecionar Unidade");
             }
 
             // MOVIMENTAÇÕES CASCATA
@@ -3947,7 +3947,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
                 });
                 movUnidade.addEventListener('change', function() { aplicarCascataReversa(this.value, movLocal, movImovel); });
                 popularSelectInteligente(movLocal, localidades, null, "Selecionar Localização");
-                popularSelectInteligente(movUnidade, unidades, null, "Selecionar Unidade");
+                popularSelectInteligente(movUnidade, unidades, () => false, "Selecionar Unidade");
             }
 
             // FILTROS PRINCIPAIS
@@ -3968,7 +3968,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
                 });
                 fUnidade.addEventListener('change', function() { aplicarCascataReversa(this.value, fLocal, fImovel); });
                 popularSelectInteligente(fLocal, localidades, null, "Todas as localidades");
-                popularSelectInteligente(fUnidade, unidades, null, "Todas as unidades");
+                popularSelectInteligente(fUnidade, unidades, () => false, "Todas as unidades");
             }
 
             // FILTROS CONSULTA CASCATA
@@ -3989,7 +3989,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
                 });
                 fUnidadeCons.addEventListener('change', function() { aplicarCascataReversa(this.value, fLocalCons, fImovelCons); });
                 popularSelectInteligente(fLocalCons, localidades, null, "Todas as localidades");
-                popularSelectInteligente(fUnidadeCons, unidades, null, "Todas as unidades");
+                popularSelectInteligente(fUnidadeCons, unidades, () => false, "Todas as unidades");
             }
         }
 
@@ -5539,7 +5539,7 @@ function verificarRelatorioViaUrl() {
                         optionsHtml += filtradas.map(u => `<option value="${u.id}" data-localidade="${u.localidadeId}">${u.nome}</option>`).join('');
                     }
                     el.innerHTML = optionsHtml;
-                    if (localId) el.disabled = false;
+                    el.disabled = !localId || filtradas.length === 0;
                 }
             });
         }
@@ -5636,9 +5636,7 @@ function verificarRelatorioViaUrl() {
             if (!dadosFormulario.codigo || !dadosFormulario.nome || !dadosFormulario.especieId || !dadosFormulario.localidadeId ||
                 !dadosFormulario.unidadeId || !dadosFormulario.estadoConservacao || !dadosFormulario.imovel ||
                 !dadosFormulario.usoBem || !dadosFormulario.tipoControle || !dadosFormulario.gerencialId ||
-                !dadosFormulario.contaPatrimonialId || !dadosFormulario.dataAquisicao || !dadosFormulario.dataInstalacao ||
-                !dadosFormulario.cnpjFornecedor || !dadosFormulario.fornecedor || !dadosFormulario.numeroNotaFiscal || !dadosFormulario.valorAquisicao ||
-                !dadosFormulario.imagem) { exibirToast('Preencha os campos obrigatórios e adicione uma imagem.', 'warning'); return; }
+                !dadosFormulario.contaPatrimonialId || !dadosFormulario.imagem) { exibirToast('Preencha os campos obrigatórios e adicione uma imagem.', 'warning'); return; }
             if (tipoControleAtual === 'NAO IMOBILIZADO') {
                 if (!/^[A-Z0-9]{1,6}$/.test(dadosFormulario.codigo)) { exibirToast('Plaqueta inválida. Use até 6 caracteres alfanuméricos (ex: NI0765).', 'warning');
                     document.getElementById('codigoBem').focus(); return; }
@@ -5855,12 +5853,6 @@ function verificarRelatorioViaUrl() {
             if (!preenchido(bem.tipoControle)) pendencias.push('Tipo de Controle');
             if (!preenchido(bem.gerencialId)) pendencias.push('Gerencial');
             if (!preenchido(bem.contaPatrimonialId)) pendencias.push('Conta Patrimonial');
-            if (!preenchido(bem.dataAquisicao)) pendencias.push('Data de Aquisição');
-            if (!preenchido(bem.dataInstalacao)) pendencias.push('Data de Instalação');
-            if (!preenchido(bem.cnpjFornecedor)) pendencias.push('CNPJ Fornecedor');
-            if (!preenchido(bem.fornecedor)) pendencias.push('Fornecedor');
-            if (!preenchido(bem.numeroNotaFiscal)) pendencias.push('Número da Nota Fiscal');
-            if (!preenchido(bem.valorAquisicao)) pendencias.push('Valor de Aquisição');
             if (!preenchido(bem.imagem)) pendencias.push('Foto');
             return pendencias;
         }
@@ -5872,7 +5864,7 @@ function verificarRelatorioViaUrl() {
             setTimeout(() => {
                 const pendencias = obterPendenciasInventario(bem);
                 const abaId = pendencias.includes('Foto') ? 'foto-bem-tab' :
-                    (pendencias.some(campo => ['Gerencial', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'CNPJ Fornecedor', 'Fornecedor', 'Número da Nota Fiscal', 'Valor de Aquisição'].includes(campo)) ? 'controle-contabil-tab' : 'controle-fisico-tab');
+                    (pendencias.some(campo => ['Gerencial', 'Conta Patrimonial'].includes(campo)) ? 'controle-contabil-tab' : 'controle-fisico-tab');
                 const aba = document.getElementById(abaId);
                 if (aba) new bootstrap.Tab(aba).show();
             }, 150);
