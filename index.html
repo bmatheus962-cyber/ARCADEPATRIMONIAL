@@ -7418,13 +7418,14 @@ function verificarRelatorioViaUrl() {
                             const nomeGerencial = celStr(linha, 12);
                             const nomeConta = celStr(linha, 13);
                             const especie = especies.find(e => e.nome.trim().toLowerCase() === nomeEspecie.toLowerCase());
-                            const localidade = localidades.find(l => l.nome.trim().toLowerCase() === nomeLocalidade.toLowerCase());
-                            const unidade = localidade ? unidades.find(u => u.localidadeId === localidade.id && u.nome.trim().toLowerCase() === nomeUnidade.toLowerCase()) : null;
+                            const localidade = nomeLocalidade ? localidades.find(l => l.nome.trim().toLowerCase() === nomeLocalidade.toLowerCase()) : null;
+                            const unidade = localidade && nomeUnidade ? unidades.find(u => u.localidadeId === localidade.id && u.nome.trim().toLowerCase() === nomeUnidade.toLowerCase()) : null;
                             const gerencial = gerenciais.find(g => g.nome.trim().toLowerCase() === nomeGerencial.toLowerCase());
                             const contaPatrimonial = contasPatrimoniais.find(c => c.nome.trim().toLowerCase() === nomeConta.toLowerCase());
                             if (!especie) { registrarErroImportacao(index + 2, codigoFinal, `Espécie "${nomeEspecie}" não encontrada.`, linha); continue; }
-                            if (!localidade) { registrarErroImportacao(index + 2, codigoFinal, `Localidade "${nomeLocalidade}" não encontrada.`, linha); continue; }
-                            if (!unidade) { registrarErroImportacao(index + 2, codigoFinal, `Unidade "${nomeUnidade}" não encontrada na localidade "${nomeLocalidade}".`, linha); continue; }
+                            if (nomeLocalidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `Localidade "${nomeLocalidade}" não encontrada.`, linha); continue; }
+                            if (nomeUnidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `A Unidade "${nomeUnidade}" só pode ser informada quando a Localidade também for preenchida.`, linha); continue; }
+                            if (localidade && !unidade) { registrarErroImportacao(index + 2, codigoFinal, `Unidade "${nomeUnidade}" não encontrada na localidade "${nomeLocalidade}".`, linha); continue; }
                             if (!gerencial) { registrarErroImportacao(index + 2, codigoFinal, `Gerencial "${nomeGerencial}" não encontrado.`, linha); continue; }
                             if (!contaPatrimonial) { registrarErroImportacao(index + 2, codigoFinal, `Conta Patrimonial "${nomeConta}" não encontrada.`, linha); continue; }
                             let imovelVal = celStr(linha, 3).toUpperCase();
@@ -7433,8 +7434,8 @@ function verificarRelatorioViaUrl() {
                                 nome: celStr(linha, 1),
                                 especieId: especie.id,
                                 imovel: imovelVal,
-                                localidadeId: localidade.id,
-                                unidadeId: unidade.id,
+                                localidadeId: localidade ? localidade.id : null,
+                                unidadeId: unidade ? unidade.id : null,
                                 estadoConservacao: celStr(linha, 6).toUpperCase(),
                                 usoBem: celStr(linha, 7).toUpperCase(),
                                 tipoControle: tipoControleLinha,
@@ -9172,7 +9173,7 @@ document.addEventListener('hidden.bs.modal', function () {
                 return;
             }
             const cabecalhos = CABECALHOS_IMPORTACAO_BENS;
-            const obrigatorias = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15]);
+            const obrigatorias = new Set([0, 1, 2, 3, 6, 7, 8, 12, 13, 14, 15]);
             const ws = XLSX.utils.aoa_to_sheet([cabecalhos]);
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
             ws['!autofilter'] = { ref: `A1:S1` };
@@ -9194,10 +9195,10 @@ document.addEventListener('hidden.bs.modal', function () {
                 ['Azul claro', 'Coluna opcional na importação'],
                 [],
                 ['Colunas consideradas obrigatórias pelo importador'],
-                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Localidade', 'Unidade', 'Estado de Conservação', 'Uso do Bem', 'Tipo de Controle', 'Gerencial', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'Valor de Aquisição'],
+                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Estado de Conservação', 'Uso do Bem', 'Tipo de Controle', 'Gerencial', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'Valor de Aquisição'],
                 [],
                 ['Observações'],
-                ['Os nomes de Espécie, Localidade, Unidade, Tipo de Controle, Gerencial e Conta Patrimonial devem existir previamente no sistema.'],
+                ['Os nomes de Espécie, Tipo de Controle, Gerencial e Conta Patrimonial devem existir previamente no sistema. A Localidade é opcional; quando informada, deve existir previamente no sistema e a Unidade, se preenchida, deve pertencer à Localidade informada.'],
                 ['As datas podem ser informadas como datas válidas do Excel ou no formato AAAA-MM-DD.'],
                 ['A primeira aba contém somente o cabeçalho para evitar que uma linha de exemplo seja importada como bem.']
             ];
