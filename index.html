@@ -325,6 +325,9 @@
         .msg-texto { line-height: 1.3; }
         .msg-hora { font-size: 0.65rem; color: rgba(0,0,0,0.45); text-align: right; margin-top: 0.2rem; }
         .dark-mode .msg-hora { color: rgba(255,255,255,0.45); }
+        .chat-camera-panel { padding: 0.6rem; background-color: var(--bg-body); border-top: 1px solid var(--border-color); }
+        .chat-camera-video { display: block; width: 100%; max-height: 240px; object-fit: cover; border-radius: var(--radius-md); background: #020617; }
+        .chat-camera-actions { display: flex; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }
         .chat-input-area { padding: 0.75rem; background-color: var(--bg-body); border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem; align-items: center; }
         .chat-input-area input { flex: 1; border-radius: 1.5rem; border: 1px solid var(--input-border); padding: 0.5rem 1rem; background-color: var(--input-bg); color: var(--text-main); font-size: 0.9rem; }
         .chat-input-area input:focus { border-color: #075e54; outline: none; }
@@ -408,6 +411,8 @@
         .btn-dark-mode { width: 50px; height: 50px; border-radius: 50%; background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: transform 0.2s; }
         .btn-dark-mode:hover { transform: scale(1.1) rotate(15deg); color: var(--warning-color); }
         .main-app-container { display: none; background-color: var(--bg-body); min-height: 100vh; }
+        .cadastro-search-wrapper { min-width: 220px; max-width: 420px; }
+        @media (max-width: 767.98px) { #cadastros-section .d-flex.justify-content-between.align-items-center.mb-4 { flex-wrap: wrap; } #cadastros-section .cadastro-search-wrapper { order: 3; width: 100%; max-width: none; min-width: 100%; margin: 0.75rem 0 0 !important; } }
         .progress-bar-inventario { height: 24px; background-color: var(--border-color); border-radius: 12px; overflow: hidden; margin: 1rem 0 0.5rem; position: relative; }
         .progress-fill { background: linear-gradient(90deg, var(--primary-color), var(--success-color)); height: 100%; border-radius: 12px; box-shadow: 0 0 10px rgba(37, 99, 235, 0.4); transition: width 0.5s ease-in-out; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
         .progress-label-inside { color: white; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
@@ -1560,9 +1565,18 @@
         <div class="chat-messages" id="chat-messages">
             <!-- Mensagens renderizadas via JS -->
         </div>
+        <div class="chat-camera-panel" id="chat-camera-panel" style="display: none;">
+            <video id="chat-camera-video" class="chat-camera-video" autoplay playsinline></video>
+            <div class="chat-camera-actions">
+                <button type="button" class="btn btn-sm btn-success" onclick="ChatSistema.capturarFotoCamera()"><i class="bi bi-camera-fill me-1"></i> Capturar</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="ChatSistema.fecharCamera()"><i class="bi bi-x-circle me-1"></i> Cancelar</button>
+            </div>
+        </div>
         <div class="chat-input-area">
-            <button class="chat-btn-attach" onclick="document.getElementById('chat-file-input').click()"><i class="bi bi-paperclip"></i></button>
+            <button type="button" class="chat-btn-attach" onclick="document.getElementById('chat-file-input').click()" title="Anexar ficheiro"><i class="bi bi-paperclip"></i></button>
+            <button type="button" class="chat-btn-attach" onclick="ChatSistema.abrirCamera()" title="Tirar foto"><i class="bi bi-camera-fill"></i></button>
             <input type="file" id="chat-file-input" accept="image/*,application/pdf" style="display: none;" onchange="ChatSistema.enviarAnexo(this)">
+            <input type="file" id="chat-camera-file-input" accept="image/*" capture="environment" style="display: none;" onchange="ChatSistema.enviarAnexo(this)">
             <input type="text" id="chat-input" placeholder="Digite uma mensagem..." autocomplete="off">
             <button class="chat-btn-send" onclick="ChatSistema.enviarMensagem()"><i class="bi bi-send-fill"></i></button>
         </div>
@@ -1823,6 +1837,7 @@
         unsubscribe: null,
         aberto: false,
         mensagensNaoLidas: 0,
+        cameraStream: null,
 
         async inicializar(db) {
             this.dbRef = db;
@@ -1888,6 +1903,84 @@
                 });
             } catch (e) {
                 console.error('Erro ao enviar mensagem:', e);
+            }
+        },
+
+        abrirCamera() {
+            const inputMobile = document.getElementById('chat-camera-file-input');
+            if (typeof ehDispositivoMovel === 'function' && ehDispositivoMovel()) {
+                inputMobile?.click();
+                return;
+            }
+            if (!navigator.mediaDevices?.getUserMedia) {
+                exibirToast('O navegador não suporta acesso à webcam.', 'danger');
+                return;
+            }
+            const painel = document.getElementById('chat-camera-panel');
+            const video = document.getElementById('chat-camera-video');
+            if (!painel || !video) return;
+            if (this.cameraStream) this.fecharCamera();
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }).then(stream => {
+                this.cameraStream = stream;
+                video.srcObject = stream;
+                painel.style.display = 'block';
+                video.play?.().catch(() => {});
+            }).catch(erro => {
+                console.error('Erro ao aceder à webcam do chat:', erro);
+                exibirToast('Não foi possível aceder à webcam. Verifique a permissão do navegador.', 'danger');
+            });
+        },
+
+        fecharCamera() {
+            if (this.cameraStream) {
+                this.cameraStream.getTracks().forEach(track => track.stop());
+                this.cameraStream = null;
+            }
+            const video = document.getElementById('chat-camera-video');
+            const painel = document.getElementById('chat-camera-panel');
+            if (video) video.srcObject = null;
+            if (painel) painel.style.display = 'none';
+        },
+
+        async capturarFotoCamera() {
+            const video = document.getElementById('chat-camera-video');
+            if (!video || !video.videoWidth || !video.videoHeight) {
+                exibirToast('A webcam ainda não está pronta. Tente novamente.', 'warning');
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const base64 = canvas.toDataURL('image/jpeg', 0.88);
+            this.fecharCamera();
+            await this.enviarImagemCapturada(base64);
+        },
+
+        async enviarImagemCapturada(base64) {
+            if (!base64 || !this.dbRef) return;
+            const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
+            const usuario = loggedUser?.email || auth.currentUser?.email || 'Desconhecido';
+            mostrarLoading('Enviando foto...');
+            try {
+                const imagemComprimida = await comprimirImagem(base64, 800, 0.7);
+                const base64Payload = String(imagemComprimida).split(',')[1] || String(imagemComprimida);
+                if (base64Payload.length > 850000) {
+                    exibirToast('A foto é demasiado grande para o armazenamento seguro do chat.', 'warning');
+                    return;
+                }
+                await this.dbRef.collection('chat_mensagens').add({
+                    texto: `foto_chat_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`,
+                    usuario: usuario,
+                    tipo: 'imagem',
+                    arquivoBase64: imagemComprimida,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (erro) {
+                console.error('Erro ao enviar foto da webcam:', erro);
+                exibirToast('Erro ao enviar a foto para o chat.', 'danger');
+            } finally {
+                esconderLoading();
             }
         },
 
@@ -2937,7 +3030,7 @@
         function carregarTabelaUsuarios() {
             const tbody = document.getElementById('tabelaUsuarios');
             if (!tbody) return;
-            const pag = calcularPaginacao(users, 'usuarios');
+            const pag = calcularPaginacao(filtrarCadastro('usuarios', users), 'usuarios');
             let html = '';
             if (pag.dados.length === 0) {
                 html = '<tr><td colspan="3" class="text-center text-muted">Nenhum usuário cadastrado.</td></tr>';
@@ -4476,18 +4569,28 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             { chave: 'contasPatrimoniais', tabela: 'tabelaContasPatrimoniais', render: 'carregarTabelaContasPatrimoniais', campos: [{ campo: 'id', titulo: 'ID' }, { campo: 'nome', titulo: 'Nome da Conta' }, { campo: 'vidaUtil', titulo: 'Vida Útil' }] },
             { chave: 'imoveis', tabela: 'tabelaImoveis', render: 'carregarImoveisTabela', campos: [{ campo: 'id', titulo: 'ID' }, { campo: 'nome', titulo: 'Nome do Imóvel' }] },
             { chave: 'unidades', tabela: 'tabelaUnidades', render: 'carregarUnidadesTabela', campos: [{ campo: 'id', titulo: 'ID' }, { campo: 'nome', titulo: 'Nome' }, { campo: 'localidade', titulo: 'Localidade' }, { campo: 'responsavel', titulo: 'Responsável' }] },
-            { chave: 'tiposControle', tabela: 'tabelaTiposControle', render: 'carregarTabelaTiposControle', campos: [{ campo: 'id', titulo: 'ID' }, { campo: 'nome', titulo: 'Nome do Tipo de Controle' }] }
+            { chave: 'tiposControle', tabela: 'tabelaTiposControle', render: 'carregarTabelaTiposControle', campos: [{ campo: 'id', titulo: 'ID' }, { campo: 'nome', titulo: 'Nome do Tipo de Controle' }] },
+            { chave: 'usuarios', tabela: 'tabelaUsuarios', render: 'carregarTabelaUsuarios', campos: [{ campo: 'identificador', titulo: 'Usuário' }, { campo: 'role', titulo: 'Função' }] }
         ];
         function obterValorCampoCadastro(chave, item, campo) {
             if (campo === 'localidade') return localidades.find(localidade => String(localidade.id) === String(item.localidadeId))?.nome || '';
+            if (campo === 'identificador') return item?.username || item?.email || '';
             return item?.[campo] ?? '';
         }
         function filtrarCadastro(chave, dados) {
             const filtros = filtrosCadastros[chave] || {};
-            return dados.filter(item => Object.entries(filtros).every(([campo, termo]) => {
-                const texto = String(termo || '').trim().toLocaleLowerCase('pt-BR');
-                return !texto || String(obterValorCampoCadastro(chave, item, campo)).toLocaleLowerCase('pt-BR').includes(texto);
-            }));
+            const pesquisaGeral = String(filtros.global || '').trim().toLocaleLowerCase('pt-BR');
+            const config = obterConfiguracaoFiltroCadastro(chave);
+            return dados.filter(item => {
+                if (pesquisaGeral) {
+                    const corresponde = (config?.campos || []).some(configCampo => String(obterValorCampoCadastro(chave, item, configCampo.campo)).toLocaleLowerCase('pt-BR').includes(pesquisaGeral));
+                    if (!corresponde) return false;
+                }
+                return Object.entries(filtros).filter(([campo]) => campo !== 'global').every(([campo, termo]) => {
+                    const texto = String(termo || '').trim().toLocaleLowerCase('pt-BR');
+                    return !texto || String(obterValorCampoCadastro(chave, item, campo)).toLocaleLowerCase('pt-BR').includes(texto);
+                });
+            });
         }
         function obterConfiguracaoFiltroCadastro(chave) { return configuracaoFiltrosCadastros.find(config => config.chave === chave); }
         function garantirModalFiltroCadastro() {
@@ -4523,7 +4626,47 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             config.campos.forEach((configCampo, indice) => { const th = cabecalhos[indice]; if (!th) return; const ativo = String(filtrosCadastros[chave]?.[configCampo.campo] || '').trim(); th.innerHTML = `${configCampo.titulo} <button type="button" class="btn btn-sm btn-link p-0 ms-1" title="Filtrar por ${configCampo.titulo}" data-filtro-cadastro="${chave}" data-filtro-campo="${configCampo.campo}" data-filtro-titulo="${configCampo.titulo}"><i class="bi bi-funnel-fill" style="color: ${ativo ? 'var(--accent-color)' : 'var(--primary-color)'}; font-size: 0.9rem;"></i></button>`; });
             cabecalhos.forEach(th => th.querySelector('[data-filtro-cadastro]')?.addEventListener('click', evento => { const botao = evento.currentTarget; abrirFiltroCadastro(botao.dataset.filtroCadastro, botao.dataset.filtroCampo, botao.dataset.filtroTitulo); }));
         }
-        function configurarFiltrosCadastros() { garantirModalFiltroCadastro(); configuracaoFiltrosCadastros.forEach(config => renderizarCabecalhoFiltrosCadastro(config.chave)); }
+        function atualizarPesquisaCadastro(chave, valor) {
+            const config = obterConfiguracaoFiltroCadastro(chave);
+            if (!config) return;
+            filtrosCadastros[chave] = { global: valor || '' };
+            if (paginacao[chave]) paginacao[chave].pagina = 1;
+            if (typeof window[config.render] === 'function') window[config.render]();
+            const input = document.querySelector(`[data-pesquisa-cadastro="${chave}"] input`);
+            const limpar = document.querySelector(`[data-pesquisa-cadastro="${chave}"] button[data-limpar-pesquisa]`);
+            if (limpar) limpar.style.display = String(valor || '').trim() ? 'inline-flex' : 'none';
+            if (input && input.value !== (valor || '')) input.value = valor || '';
+        }
+        function limparPesquisaCadastro(chave) {
+            atualizarPesquisaCadastro(chave, '');
+            document.querySelector(`[data-pesquisa-cadastro="${chave}"] input`)?.focus();
+        }
+        function garantirPesquisaCadastro(chave) {
+            const config = obterConfiguracaoFiltroCadastro(chave);
+            const tabela = document.getElementById(config?.tabela);
+            const pane = tabela?.closest('.cadastro-tab');
+            const cabecalho = pane?.querySelector('.d-flex.justify-content-between.align-items-center.mb-4');
+            if (!config || !cabecalho) return;
+            let wrapper = cabecalho.querySelector(`[data-pesquisa-cadastro="${chave}"]`);
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'cadastro-search-wrapper flex-grow-1 mx-3';
+                wrapper.dataset.pesquisaCadastro = chave;
+                wrapper.innerHTML = `<div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input type="search" class="form-control" placeholder="Pesquisar em ${config.chave === 'usuarios' ? 'utilizadores' : 'cadastros'}..." autocomplete="off" aria-label="Pesquisar ${config.chave}"><button type="button" class="btn btn-outline-secondary" data-limpar-pesquisa title="Limpar pesquisa" style="display:none;"><i class="bi bi-x-lg"></i></button></div>`;
+                const ultimo = cabecalho.lastElementChild;
+                if (ultimo && ultimo !== cabecalho.querySelector('h4')) cabecalho.insertBefore(wrapper, ultimo);
+                else cabecalho.appendChild(wrapper);
+                const input = wrapper.querySelector('input');
+                input.addEventListener('input', evento => atualizarPesquisaCadastro(chave, evento.target.value));
+                wrapper.querySelector('[data-limpar-pesquisa]').addEventListener('click', () => limparPesquisaCadastro(chave));
+            }
+            const valorAtual = filtrosCadastros[chave]?.global || '';
+            const input = wrapper.querySelector('input');
+            if (input) input.value = valorAtual;
+            const limpar = wrapper.querySelector('[data-limpar-pesquisa]');
+            if (limpar) limpar.style.display = valorAtual.trim() ? 'inline-flex' : 'none';
+        }
+        function configurarFiltrosCadastros() { configuracaoFiltrosCadastros.forEach(config => garantirPesquisaCadastro(config.chave)); }
 
         function carregarTabelaEspecies() { const t = document.getElementById('tabelaEspecies'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('especies', especies), 'especies'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhuma espécie cadastrada.</td></tr>'; } else { html = pag.dados.map(e => `<tr><td>${escaparHtmlSeguro(e.id)}</td><td>${escaparHtmlSeguro(e.nome)}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarEspecie(${e.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirEspecie(${e.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'especies', pag.totalPaginas); }
 
@@ -7542,13 +7685,13 @@ function verificarRelatorioViaUrl() {
                             const localidade = nomeLocalidade ? localidades.find(l => l.nome.trim().toLowerCase() === nomeLocalidade.toLowerCase()) : null;
                             const unidade = localidade && nomeUnidade ? unidades.find(u => u.localidadeId === localidade.id && u.nome.trim().toLowerCase() === nomeUnidade.toLowerCase()) : null;
                             const gerencial = nomeGerencial ? gerenciais.find(g => g.nome.trim().toLowerCase() === nomeGerencial.toLowerCase()) : null;
-                            const contaPatrimonial = contasPatrimoniais.find(c => c.nome.trim().toLowerCase() === nomeConta.toLowerCase());
+                            const contaPatrimonial = nomeConta ? contasPatrimoniais.find(c => c.nome.trim().toLowerCase() === nomeConta.toLowerCase()) : null;
                             if (!especie) { registrarErroImportacao(index + 2, codigoFinal, `Espécie "${nomeEspecie}" não encontrada.`, linha); continue; }
                             if (nomeLocalidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `Localidade "${nomeLocalidade}" não encontrada.`, linha); continue; }
                             if (nomeUnidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `A Unidade "${nomeUnidade}" só pode ser informada quando a Localidade também for preenchida.`, linha); continue; }
                             if (localidade && !unidade) { registrarErroImportacao(index + 2, codigoFinal, `Unidade "${nomeUnidade}" não encontrada na localidade "${nomeLocalidade}".`, linha); continue; }
                             if (nomeGerencial && !gerencial) { registrarErroImportacao(index + 2, codigoFinal, `Gerencial "${nomeGerencial}" não encontrado.`, linha); continue; }
-                            if (!contaPatrimonial) { registrarErroImportacao(index + 2, codigoFinal, `Conta Patrimonial "${nomeConta}" não encontrada.`, linha); continue; }
+                            if (nomeConta && !contaPatrimonial) { registrarErroImportacao(index + 2, codigoFinal, `Conta Patrimonial "${nomeConta}" não encontrada.`, linha); continue; }
                             let imovelVal = celStr(linha, 3).toUpperCase();
                             const dadosDoBem = {
                                 codigo: codigoFinal,
@@ -7564,7 +7707,7 @@ function verificarRelatorioViaUrl() {
                                 observacao: celStr(linha, 10),
                                 plaquetaAnterior: celStr(linha, 11),
                                 gerencialId: gerencial ? gerencial.id : null,
-                                contaPatrimonialId: contaPatrimonial.id,
+                                contaPatrimonialId: contaPatrimonial ? contaPatrimonial.id : null,
                                 dataAquisicao: formatarDataExcel(linha[14]),
                                 dataInstalacao: formatarDataExcel(linha[15]),
                                 fornecedor: celStr(linha, 16),
@@ -9294,7 +9437,7 @@ document.addEventListener('hidden.bs.modal', function () {
                 return;
             }
             const cabecalhos = CABECALHOS_IMPORTACAO_BENS;
-            const obrigatorias = new Set([0, 1, 2, 3, 8, 13]);
+            const obrigatorias = new Set([0, 1, 2, 3, 8]);
             const ws = XLSX.utils.aoa_to_sheet([cabecalhos]);
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
             ws['!autofilter'] = { ref: `A1:S1` };
@@ -9316,10 +9459,10 @@ document.addEventListener('hidden.bs.modal', function () {
                 ['Azul claro', 'Coluna opcional na importação'],
                 [],
                 ['Colunas consideradas obrigatórias pelo importador'],
-                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Tipo de Controle', 'Conta Patrimonial'],
+                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Tipo de Controle'],
                 [],
                 ['Observações'],
-                ['Os nomes de Espécie, Tipo de Controle e Conta Patrimonial devem existir previamente no sistema. Localidade e Gerencial são opcionais; quando informados, devem existir previamente no sistema. A Unidade, se preenchida, deve pertencer à Localidade informada. Estado de Conservação, Uso do Bem, Data de Aquisição e Data de Instalação também são opcionais.'],
+                ['Os nomes de Espécie e Tipo de Controle devem existir previamente no sistema. Localidade, Gerencial e Conta Patrimonial são opcionais; quando informados, devem existir previamente no sistema. A Unidade, se preenchida, deve pertencer à Localidade informada. Estado de Conservação, Uso do Bem, Data de Aquisição e Data de Instalação também são opcionais.'],
                 ['As datas podem ser informadas como datas válidas do Excel ou no formato AAAA-MM-DD.'],
                 ['A primeira aba contém somente o cabeçalho para evitar que uma linha de exemplo seja importada como bem.']
             ];
