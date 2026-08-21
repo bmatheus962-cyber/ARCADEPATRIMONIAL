@@ -3347,16 +3347,25 @@
             document.getElementById('filtroObservacaoConsulta')?.addEventListener('input', filtrarBensConsulta);
             document.getElementById('btnLimparFiltrosConsulta')?.addEventListener('click', limparFiltrosConsulta);
 
-           // CÂMERA (Integrado com a câmera nativa do celular)
+           // CÂMERA: captura nativa no mobile e webcam do navegador no PC/notebook
             document.getElementById('btnRemoverImagem')?.addEventListener('click', removerImagem);
             
             document.getElementById('btnAbrirCamera')?.addEventListener('click', () => {
                 const imgInput = document.getElementById('imagemBem');
-                if(imgInput) {
-                    imgInput.setAttribute('capture', 'environment'); // Força abrir a câmera
-                    imgInput.click();
+                if (ehDispositivoMovel()) {
+                    if (imgInput) {
+                        imgInput.setAttribute('capture', 'environment'); // Mantém a câmera nativa no mobile
+                        imgInput.click();
+                    }
+                } else {
+                    if (imgInput) imgInput.removeAttribute('capture');
+                    iniciarCamera('environment'); // Usa a webcam no PC/notebook, sem abrir o seletor de documentos
                 }
             });
+
+            document.getElementById('btnCapturar')?.addEventListener('click', capturarImagem);
+            document.getElementById('btnVirarCamera')?.addEventListener('click', virarCamera);
+            document.getElementById('btnCancelarCamera')?.addEventListener('click', pararCamera);
             
             document.getElementById('btnSelecionarArquivo')?.addEventListener('click', () => {
                 const imgInput = document.getElementById('imagemBem');
@@ -4244,6 +4253,12 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
         // FUNÇÕES DE CÂMERA
         // ================================================================
         let _cameraFacingMode = 'environment';
+
+        function ehDispositivoMovel() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
+            return /android|iphone|ipad|ipod|iemobile|opera mini|windows phone|mobile/i.test(userAgent) ||
+                (/macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1);
+        }
 
         function iniciarCamera(facingMode) {
             if (facingMode) _cameraFacingMode = facingMode;
@@ -7420,13 +7435,13 @@ function verificarRelatorioViaUrl() {
                             const especie = especies.find(e => e.nome.trim().toLowerCase() === nomeEspecie.toLowerCase());
                             const localidade = nomeLocalidade ? localidades.find(l => l.nome.trim().toLowerCase() === nomeLocalidade.toLowerCase()) : null;
                             const unidade = localidade && nomeUnidade ? unidades.find(u => u.localidadeId === localidade.id && u.nome.trim().toLowerCase() === nomeUnidade.toLowerCase()) : null;
-                            const gerencial = gerenciais.find(g => g.nome.trim().toLowerCase() === nomeGerencial.toLowerCase());
+                            const gerencial = nomeGerencial ? gerenciais.find(g => g.nome.trim().toLowerCase() === nomeGerencial.toLowerCase()) : null;
                             const contaPatrimonial = contasPatrimoniais.find(c => c.nome.trim().toLowerCase() === nomeConta.toLowerCase());
                             if (!especie) { registrarErroImportacao(index + 2, codigoFinal, `Espécie "${nomeEspecie}" não encontrada.`, linha); continue; }
                             if (nomeLocalidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `Localidade "${nomeLocalidade}" não encontrada.`, linha); continue; }
                             if (nomeUnidade && !localidade) { registrarErroImportacao(index + 2, codigoFinal, `A Unidade "${nomeUnidade}" só pode ser informada quando a Localidade também for preenchida.`, linha); continue; }
                             if (localidade && !unidade) { registrarErroImportacao(index + 2, codigoFinal, `Unidade "${nomeUnidade}" não encontrada na localidade "${nomeLocalidade}".`, linha); continue; }
-                            if (!gerencial) { registrarErroImportacao(index + 2, codigoFinal, `Gerencial "${nomeGerencial}" não encontrado.`, linha); continue; }
+                            if (nomeGerencial && !gerencial) { registrarErroImportacao(index + 2, codigoFinal, `Gerencial "${nomeGerencial}" não encontrado.`, linha); continue; }
                             if (!contaPatrimonial) { registrarErroImportacao(index + 2, codigoFinal, `Conta Patrimonial "${nomeConta}" não encontrada.`, linha); continue; }
                             let imovelVal = celStr(linha, 3).toUpperCase();
                             const dadosDoBem = {
@@ -7442,7 +7457,7 @@ function verificarRelatorioViaUrl() {
                                 numeroSerie: celStr(linha, 9),
                                 observacao: celStr(linha, 10),
                                 plaquetaAnterior: celStr(linha, 11),
-                                gerencialId: gerencial.id,
+                                gerencialId: gerencial ? gerencial.id : null,
                                 contaPatrimonialId: contaPatrimonial.id,
                                 dataAquisicao: formatarDataExcel(linha[14]),
                                 dataInstalacao: formatarDataExcel(linha[15]),
@@ -9173,7 +9188,7 @@ document.addEventListener('hidden.bs.modal', function () {
                 return;
             }
             const cabecalhos = CABECALHOS_IMPORTACAO_BENS;
-            const obrigatorias = new Set([0, 1, 2, 3, 6, 7, 8, 12, 13, 14, 15]);
+            const obrigatorias = new Set([0, 1, 2, 3, 6, 7, 8, 13, 14, 15]);
             const ws = XLSX.utils.aoa_to_sheet([cabecalhos]);
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
             ws['!autofilter'] = { ref: `A1:S1` };
@@ -9195,10 +9210,10 @@ document.addEventListener('hidden.bs.modal', function () {
                 ['Azul claro', 'Coluna opcional na importação'],
                 [],
                 ['Colunas consideradas obrigatórias pelo importador'],
-                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Estado de Conservação', 'Uso do Bem', 'Tipo de Controle', 'Gerencial', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'Valor de Aquisição'],
+                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Estado de Conservação', 'Uso do Bem', 'Tipo de Controle', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'Valor de Aquisição'],
                 [],
                 ['Observações'],
-                ['Os nomes de Espécie, Tipo de Controle, Gerencial e Conta Patrimonial devem existir previamente no sistema. A Localidade é opcional; quando informada, deve existir previamente no sistema e a Unidade, se preenchida, deve pertencer à Localidade informada.'],
+                ['Os nomes de Espécie, Tipo de Controle e Conta Patrimonial devem existir previamente no sistema. Localidade e Gerencial são opcionais; quando informados, devem existir previamente no sistema. A Unidade, se preenchida, deve pertencer à Localidade informada.'],
                 ['As datas podem ser informadas como datas válidas do Excel ou no formato AAAA-MM-DD.'],
                 ['A primeira aba contém somente o cabeçalho para evitar que uma linha de exemplo seja importada como bem.']
             ];
