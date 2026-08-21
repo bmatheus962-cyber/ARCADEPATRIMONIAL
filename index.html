@@ -1076,7 +1076,7 @@
                                     <span id="importProgressoPct" class="fw-bold" style="font-size:0.8rem;">0%</span>
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-between mt-2"><small class="text-muted" id="importProgressoContador">0 de 0 linhas</small><small class="text-success fw-semibold" id="importProgressoAceitas">0 aceitas</small><small class="text-danger fw-semibold" id="importProgressoRejeitadas">0 rejeitadas</small></div>
+                            <div class="d-flex justify-content-between mt-2 flex-wrap gap-2"><small class="text-muted" id="importProgressoContador">0 de 0 linhas</small><small class="text-success fw-semibold" id="importProgressoAceitas">0 aceitas</small><small class="text-danger fw-semibold" id="importProgressoRejeitadas">0 rejeitadas</small><small class="text-danger fw-semibold" id="importProgressoErros">0 erros</small></div>
                         </div>
                     </div>
                 </div>
@@ -1862,7 +1862,7 @@
             if (!texto || !this.dbRef) return;
 
             const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
-            const usuario = loggedUser ? loggedUser.username : 'Desconhecido';
+            const usuario = loggedUser?.email || auth.currentUser?.email || 'Desconhecido';
 
             try {
                 input.value = '';
@@ -1881,7 +1881,7 @@
             if (!inputElement.files || inputElement.files.length === 0) return;
             const file = inputElement.files[0];
             const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
-            const usuario = loggedUser ? loggedUser.username : 'Desconhecido';
+            const usuario = loggedUser?.email || auth.currentUser?.email || 'Desconhecido';
             
             if (file.size > 3 * 1024 * 1024) { 
                 exibirToast('O arquivo deve ter no máximo 3MB.', 'warning');
@@ -1903,7 +1903,12 @@
                 if (tipo === 'imagem') {
                     base64 = await comprimirImagem(base64, 800, 0.7);
                 }
-
+                const base64Payload = String(base64).split(',')[1] || String(base64);
+                if (base64Payload.length > 850000) {
+                    exibirToast('O anexo é demasiado grande para o armazenamento seguro do chat. Reduza o ficheiro para cerca de 650 KB.', 'warning');
+                    return;
+                }
+                
                 await this.dbRef.collection('chat_mensagens').add({
                     texto: file.name,
                     usuario: usuario,
@@ -1934,7 +1939,7 @@
                 .limitToLast(50)
                 .onSnapshot(snapshot => {
                     const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
-                    const meuUsuario = loggedUser ? loggedUser.username : '';
+                    const meuUsuario = loggedUser?.email || auth.currentUser?.email || '';
                     let novaMensagemRecebida = false;
                     let ultimoRemetente = '';
                     
@@ -2031,6 +2036,9 @@
         },
 
         async limparMensagensAntigas() {
+            const usuario = usuarioAtualSistema();
+            const podeLimpar = usuarioEhSuperAdministrador() || usuario.role === 'admin' || usuario.perfilId === 'administrador';
+            if (!podeLimpar) return;
             try {
                 const trinta_dias_atras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
                 const query = this.dbRef.collection('chat_mensagens')
@@ -2217,81 +2225,80 @@
         // FUNÇÕES DE PERSISTÊNCIA COM FIREBASE
         // ================================================================
         async function carregarDadosFirebase() {
-            if (_carregandoDadosFirebase) return;
+            if (_carregandoDadosFirebase) return true;
             _carregandoDadosFirebase = true;
             try {
-                console.log("Iniciando carregamento otimizado...");
-                const colecoes = ['imoveis', 'localidades', 'unidades', 'especies', 'gerenciais', 'contasPatrimoniais', 'tiposControle', 'bens', 'planejamentos', 'permissionProfiles', 'remessas'];
-                if (usuarioEhSuperAdministrador()) colecoes.push('users');
-                const promessas = colecoes.map(col => db.collection(col).get());
-                const snapshots = await Promise.all(promessas);
-                const dadosPorColecao = Object.fromEntries(colecoes.map((nome, indice) => [nome, snapshots[indice]]));
                 const idSeguro = valor => /^\d+$/.test(String(valor)) ? parseInt(valor, 10) : String(valor);
-                imoveis = dadosPorColecao.imoveis.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                localidades = dadosPorColecao.localidades.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                unidades = dadosPorColecao.unidades.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                especies = dadosPorColecao.especies.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                gerenciais = dadosPorColecao.gerenciais.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                contasPatrimoniais = dadosPorColecao.contasPatrimoniais.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                tiposControle = dadosPorColecao.tiposControle.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                bens = dadosPorColecao.bens.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                planejamentos = dadosPorColecao.planejamentos.docs.map(doc => ({ ...doc.data(), id: String(doc.id) }));
-                users = dadosPorColecao.users ? dadosPorColecao.users.docs.map(doc => ({ id: String(doc.id), ...doc.data() })) : [];
-                permissionProfiles = dadosPorColecao.permissionProfiles.docs.map(doc => ({ id: String(doc.id), ...doc.data() }));
-                remessas = dadosPorColecao.remessas.docs.map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
-                
-                // Se não houver tipos de controle, adicionar os padrão
+                const perfilAtual = usuarioAtualSistema();
+                const emailAtual = String(perfilAtual.email || '').trim().toLowerCase();
+                const superAdmin = emailAtual === EMAIL_SUPER_ADMIN;
+                const perfilId = perfilAtual.perfilId || (perfilAtual.role === 'admin' ? 'administrador' : 'somente_consulta');
+
+                const profilesSnapshot = await db.collection('permissionProfiles').get();
+                permissionProfiles = profilesSnapshot.docs.map(doc => ({ id: String(doc.id), ...doc.data() }));
+                const perfil = permissionProfiles.find(item => item.id === perfilId);
+                const pode = (secao, acao = 'visualizar') => superAdmin || perfil?.permissoes?.[secao]?.[acao] === true || (!perfil && perfilId === 'somente_consulta' && acao === 'visualizar' && ['dashboard', 'consulta'].includes(secao)) || perfilAtual.role === 'admin' && ['visualizar', 'criar', 'editar', 'excluir', 'exportar'].includes(acao);
+                const podeReferencia = ['cadastros', 'localidades', 'dashboard', 'bens', 'consulta', 'inventario', 'baixa', 'movimentacoes', 'remessa', 'relatorios'].some(secao => pode(secao));
+                const colecoes = ['permissionProfiles'];
+                if (podeReferencia) colecoes.push('imoveis', 'localidades', 'unidades', 'especies', 'gerenciais', 'contasPatrimoniais', 'tiposControle');
+                if (['bens', 'dashboard', 'consulta', 'inventario', 'baixa', 'movimentacoes', 'remessa', 'relatorios'].some(secao => pode(secao))) colecoes.push('bens');
+                if (pode('planejamento')) colecoes.push('planejamentos');
+                if (pode('remessa')) colecoes.push('remessas');
+                if (superAdmin || perfilAtual.role === 'admin' || perfilId === 'administrador') colecoes.push('users');
+
+                const snapshots = await Promise.all(colecoes.filter((nome, indice, lista) => lista.indexOf(nome) === indice).map(col => db.collection(col).get()));
+                const dadosPorColecao = Object.fromEntries(colecoes.filter((nome, indice, lista) => lista.indexOf(nome) === indice).map((nome, indice) => [nome, snapshots[indice]]));
+                const docs = nome => dadosPorColecao[nome]?.docs || [];
+                imoveis = docs('imoveis').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                localidades = docs('localidades').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                unidades = docs('unidades').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                especies = docs('especies').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                gerenciais = docs('gerenciais').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                contasPatrimoniais = docs('contasPatrimoniais').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                tiposControle = docs('tiposControle').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                bens = docs('bens').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+                planejamentos = docs('planejamentos').map(doc => ({ ...doc.data(), id: String(doc.id) }));
+                users = docs('users').map(doc => ({ id: String(doc.id), ...doc.data() }));
+                remessas = docs('remessas').map(doc => ({ id: idSeguro(doc.id), ...doc.data() }));
+
                 if (tiposControle.length === 0) {
-                    const padroes = ['CONVENIO', 'IMOBILIZADO', 'NAO IMOBILIZADO', 'SOBRA DE INVENTARIO', 'TERCEIROS'];
-                    padroes.forEach((nome, index) => {
-                        tiposControle.push({ id: index + 1, nome: nome });
-                    });
-                    // Salvar os padrões no Firebase
-                    for (const tc of tiposControle) {
-                        await db.collection('tiposControle').doc(tc.id.toString()).set(tc);
+                    tiposControle = ['CONVENIO', 'IMOBILIZADO', 'NAO IMOBILIZADO', 'SOBRA DE INVENTARIO', 'TERCEIROS'].map((nome, index) => ({ id: index + 1, nome }));
+                    if (pode('cadastros', 'criar')) {
+                        for (const tipo of tiposControle) await db.collection('tiposControle').doc(String(tipo.id)).set(tipo, { merge: true });
                     }
                 }
-                
-                console.log("Sincronização concluída.");
                 _carregandoDadosFirebase = false;
                 return true;
             } catch (error) {
-                console.error("Erro no carregamento:", error);
+                console.error('Erro no carregamento autorizado:', error);
                 _carregandoDadosFirebase = false;
                 return false;
             }
         }
 
-        async function salvarTodosOsDadosFirebase(silencioso = false) {
+        async function salvarTodosOsDadosFirebase(silencioso = false, nomesPermitidos = ['bens']) {
             try {
-                const colecoes = [
-                    { dados: imoveis, nome: 'imoveis' },
-                    { dados: localidades, nome: 'localidades' },
-                    { dados: unidades, nome: 'unidades' },
-                    { dados: especies, nome: 'especies' },
-                    { dados: gerenciais, nome: 'gerenciais' },
-                    { dados: contasPatrimoniais, nome: 'contasPatrimoniais' },
-                    { dados: tiposControle, nome: 'tiposControle' },
-                    { dados: bens, nome: 'bens' },
-                    { dados: planejamentos, nome: 'planejamentos' },
-                    { dados: users, nome: 'users' },
-                    { dados: remessas, nome: 'remessas' }
-                ];
-                for (const colecao of colecoes) {
-                    await salvarLote(colecao.nome, colecao.dados);
+                const mapa = {
+                    imoveis, localidades, unidades, especies, gerenciais,
+                    contasPatrimoniais, tiposControle, bens, planejamentos, remessas
+                };
+                const nomes = Array.isArray(nomesPermitidos) ? nomesPermitidos : Object.keys(mapa);
+                for (const nome of nomes) {
+                    if (!(nome in mapa)) continue;
+                    const sucesso = await salvarLote(nome, mapa[nome]);
+                    if (!sucesso) throw new Error(`Falha ao salvar a coleção ${nome}.`);
                 }
-                console.log("Dados salvos com sucesso no Firebase!");
                 return true;
             } catch (error) {
-                console.error("Erro ao salvar dados no Firebase:", error);
-                if (!silencioso) exibirToast('Erro ao salvar dados no Firebase: ' + error.message, 'danger');
+                console.error('Erro ao salvar dados no Firebase:', error);
+                if (!silencioso) exibirToast('Erro ao salvar dados no Firebase. Verifique as permissões.', 'danger');
                 return false;
             }
         }
 
         async function salvarItemUnico(collectionName, item) {
             try { 
-                const docId = item.id ? item.id.toString() : null;
+                const docId = item.id ? item.id.toString() : (collectionName === 'users' ? (item.uid ? String(item.uid) : null) : null);
                 if (!docId) {
                     console.error("Item sem ID para salvar:", item);
                     return false;
@@ -2311,7 +2318,7 @@
                 let batch = db.batch();
                 let count = 0;
                 for (const item of itens) {
-                    const docId = item.id ? item.id.toString() : null;
+                    const docId = item.id ? item.id.toString() : (collectionName === 'users' ? (item.uid ? String(item.uid) : null) : null);
                     if (!docId) {
                         console.warn("Item sem ID ignorado no lote:", item);
                         continue;
@@ -2372,52 +2379,54 @@
         auth.onAuthStateChanged(async function(user) {
             const loginOverlay = document.getElementById('login-overlay');
             const mainAppContainer = document.querySelector('.main-app-container');
-            
-            if (user) {
-                // 1. Atualiza o texto do loading para dar feedback de progresso
-                mostrarLoading('Sincronizando dados com o servidor...');
-                
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                let userData;
-                if (userDoc.exists) { userData = userDoc.data(); }
-                else { userData = { username: user.email, email: user.email, role: 'usuario' }; await db.collection('users').doc(user.uid).set(userData); }
-                const sessionUser = { username: userData.username || user.email, email: user.email, role: userData.role || 'usuario', perfilId: userData.perfilId || (userData.role === 'admin' ? 'administrador' : 'somente_consulta'), uid: user.uid };
-                sessionStorage.setItem('loggedUser', JSON.stringify(sessionUser));
-                
-                const dadosCarregados = await carregarDadosFirebase();
-                if (!dadosCarregados) {
+            try {
+                if (user) {
+                    mostrarLoading('Sincronizando dados com o servidor...');
+                    const userRef = db.collection('users').doc(user.uid);
+                    const userDoc = await userRef.get();
+                    let userData = userDoc.exists ? (userDoc.data() || {}) : {
+                        username: user.email || user.uid,
+                        email: user.email || '',
+                        role: 'usuario',
+                        perfilId: 'somente_consulta',
+                        createdAt: new Date().toISOString()
+                    };
+                    if (!userDoc.exists) await userRef.set(userData, { merge: true });
+                    const sessionUser = {
+                        username: userData.username || user.email || user.uid,
+                        email: user.email || userData.email || '',
+                        role: userData.role || 'usuario',
+                        perfilId: userData.perfilId || (userData.role === 'admin' ? 'administrador' : 'somente_consulta'),
+                        uid: user.uid
+                    };
+                    sessionStorage.setItem('loggedUser', JSON.stringify(sessionUser));
+                    const dadosCarregados = await carregarDadosFirebase();
+                    if (!dadosCarregados) throw new Error('Não foi possível sincronizar os dados autorizados.');
+                    if (loginOverlay) loginOverlay.style.display = 'none';
+                    if (mainAppContainer) mainAppContainer.style.display = 'block';
+                    ChatSistema.inicializar(db);
+                    await carregarDadosIniciais();
+                    initNavigation();
+                    configurarEventListeners();
+                    verificarPreferenciaModoNoturno();
+                    verificarPermissoesAdmin();
+                    displayUserInfo();
+                    carregarFiltrosRanking();
+                    verificarRelatorioViaUrl();
                     esconderLoading();
-                    exibirToastTopo('Não foi possível sincronizar os dados. Tente novamente.', 'danger');
-                    await auth.signOut();
-                    return;
+                } else {
+                    esconderLoading();
+                    sessionStorage.removeItem('loggedUser');
+                    if (loginOverlay) loginOverlay.style.display = 'flex';
+                    if (mainAppContainer) mainAppContainer.style.display = 'none';
                 }
-                
-                loginOverlay.style.display = 'none';
-                mainAppContainer.style.display = 'block';
-                
-                // Inicia o listener do chat estritamente APÓS o Firebase confirmar o login
-                ChatSistema.inicializar(db);
-
-                carregarDadosIniciais();
-                initNavigation();
-                configurarEventListeners();
-                verificarPreferenciaModoNoturno();
-                verificarPermissoesAdmin();
-                displayUserInfo();
-                carregarFiltrosRanking();
-
-			// ----> ADICIONE ESTA LINHA AQUI <----
-       		verificarRelatorioViaUrl();
-
-                // 2. Tudo pronto! Libera a tela para o usuário usar o sistema
-                esconderLoading();
-                
-            } else {
-                // 3. Caso a sessão tenha expirado, remove resquícios, esconde o loading e volta pro login
+            } catch (error) {
+                console.error('Erro ao inicializar a sessão:', error);
                 esconderLoading();
                 sessionStorage.removeItem('loggedUser');
-                loginOverlay.style.display = 'flex';
-                mainAppContainer.style.display = 'none';
+                if (loginOverlay) loginOverlay.style.display = 'flex';
+                if (mainAppContainer) mainAppContainer.style.display = 'none';
+                exibirToastTopo('Não foi possível carregar o sistema. Tente novamente.', 'danger');
             }
         });
 
@@ -2601,11 +2610,11 @@
         }
 
         function verificarPermissoesAdmin() {
-            const loggedUser = JSON.parse(sessionStorage.getItem('loggedUser'));
-            if (loggedUser && loggedUser.role === 'admin') {
-                document.getElementById('nav-item-usuarios').style.display = 'block';
-                carregarTabelaUsuarios();
-            }
+            const loggedUser = usuarioAtualSistema();
+            const permitido = usuarioEhSuperAdministrador() || loggedUser.role === 'admin' || loggedUser.perfilId === 'administrador';
+            const nav = document.getElementById('nav-item-usuarios');
+            if (nav) nav.style.display = permitido ? 'block' : 'none';
+            if (permitido) carregarTabelaUsuarios();
         }
 
         function logout() { fazerLogout(); }
@@ -2616,7 +2625,7 @@
 
         function usuarioEhSuperAdministrador() {
             const usuario = usuarioAtualSistema();
-            return String(usuario.email || usuario.username || '').toLowerCase() === EMAIL_SUPER_ADMIN || usuario.role === 'super_admin';
+            return String(usuario.email || '').trim().toLowerCase() === EMAIL_SUPER_ADMIN;
         }
 
         function permissoesCompletas() {
@@ -2723,7 +2732,7 @@
             const usuariosConsolidados = consolidarUsuariosPorEmail(users);
             tbody.innerHTML = usuariosConsolidados.map(usuario => {
                 const perfilAtual = permissionProfiles.find(perfil => perfil.id === usuario.perfilId);
-                const opcoes = permissionProfiles.map(perfil => `<option value="${perfil.id}" ${usuario.perfilId === perfil.id ? 'selected' : ''}>${perfil.nome}</option>`).join('');
+                const opcoes = permissionProfiles.map(perfil => `<option value="${escaparHtmlSeguro(perfil.id)}" ${usuario.perfilId === perfil.id ? 'selected' : ''}>${escaparHtmlSeguro(perfil.nome)}</option>`).join('');
                 const identificador = String(usuario.username || usuario.email || '');
                 const identificadorSeguro = identificador.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                 return `<tr><td>${escaparHtmlSeguro(usuario.email || usuario.username || '—')}</td><td><span class="badge bg-secondary">${escaparHtmlSeguro(usuario.role || 'usuario')}</span></td><td><select class="form-select form-select-sm" id="perfilUsuario_${encodeURIComponent(identificador)}">${opcoes}</select></td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="salvarPerfilDoUsuario('${identificadorSeguro}')"><i class="bi bi-save me-1"></i> Salvar</button></td></tr>`;
@@ -2740,6 +2749,7 @@
             const docId = usuario.id || usuario.uid || usuario.username;
             const dadosPerfil = { ...usuario, perfilId, atualizadoEm: new Date().toISOString() };
             delete dadosPerfil.id;
+            if (dadosPerfil.password !== undefined) dadosPerfil.password = firebase.firestore.FieldValue.delete();
             try {
                 await db.collection('users').doc(String(docId)).set(dadosPerfil, { merge: true });
                 usuario.perfilId = perfilId;
@@ -2920,7 +2930,9 @@
             } else {
                 html = pag.dados.map(user => {
                     const isCurrentUserAdmin = (JSON.parse(sessionStorage.getItem('loggedUser')) || {}).username === user.username;
-                    return `<tr><td>${user.username}</td><td><span class="badge ${user.role === 'admin' ? 'bg-success' : 'bg-secondary'}">${user.role}</span></td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarUsuario('${user.username}')"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" ${isCurrentUserAdmin ? 'disabled' : ''} onclick="excluirUsuario('${user.username}')"><i class="bi bi-trash"></i></button></td></tr>`;
+                    const identificador = String(user.username || user.email || '');
+                    const identificadorSeguro = identificador.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    return `<tr><td>${escaparHtmlSeguro(identificador)}</td><td><span class="badge ${user.role === 'admin' ? 'bg-success' : 'bg-secondary'}">${escaparHtmlSeguro(user.role || 'usuario')}</span></td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarUsuario('${identificadorSeguro}')"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" ${isCurrentUserAdmin ? 'disabled' : ''} onclick="excluirUsuario('${identificadorSeguro}')"><i class="bi bi-trash"></i></button></td></tr>`;
                 }).join('');
             }
             tbody.innerHTML = html;
@@ -2928,41 +2940,29 @@
         }
 
         async function salvarUsuario() {
-            const username = document.getElementById('nomeUsuario').value.trim();
-            const password = document.getElementById('senhaUsuario').value.trim();
-            const role = document.getElementById('funcaoUsuario').value;
-            const originalUsername = document.getElementById('usuarioId').value;
-            if (!username || !password) { exibirToast('Nome de usuário e senha são obrigatórios.', 'warning'); return; }
-            let itemSalvo = null;
-            if (originalUsername) {
-                const userIndex = users.findIndex(u => u.username === originalUsername);
-                if (userIndex > -1) { 
-                    users[userIndex].username = username; 
-                    users[userIndex].password = password; 
-                    users[userIndex].role = role;
-                    itemSalvo = users[userIndex];
-                }
-            } else {
-                if (users.some(u => u.username === username)) { exibirToast('Este nome de usuário já existe.', 'warning'); return; }
-                const novoUsuario = { username, password, role };
-                users.push(novoUsuario);
-                itemSalvo = novoUsuario;
+            if (!usuarioEhSuperAdministrador() && usuarioAtualSistema().role !== 'admin' && usuarioAtualSistema().perfilId !== 'administrador') {
+                exibirToast('Acesso restrito à gestão de utilizadores.', 'danger');
+                return;
             }
-            if (itemSalvo) {
-                const sucesso = await salvarItemUnico('users', itemSalvo);
-                if (!sucesso) {
-                    await carregarDadosFirebase();
-                    carregarTabelaUsuarios();
-                    exibirToast('Não foi possível salvar o usuário. Verifique a conexão e tente novamente.', 'danger');
-                    return;
-                }
+            const username = document.getElementById('nomeUsuario')?.value.trim();
+            const originalUsername = document.getElementById('usuarioId')?.value;
+            const role = document.getElementById('funcaoUsuario')?.value || 'usuario';
+            if (!username) { exibirToast('Informe o email do utilizador.', 'warning'); return; }
+            if (!originalUsername) {
+                exibirToast('Novas contas devem ser criadas no Firebase Authentication; esta tela não armazena passwords.', 'warning');
+                return;
             }
+            const userIndex = users.findIndex(u => u.username === originalUsername || u.email === originalUsername);
+            if (userIndex < 0) { exibirToast('Utilizador não encontrado.', 'danger'); return; }
+            const usuario = { ...users[userIndex], username, email: users[userIndex].email || username, role, atualizadoEm: new Date().toISOString() };
+            delete usuario.id;
+            if (usuario.password !== undefined) usuario.password = firebase.firestore.FieldValue.delete();
+            const sucesso = await salvarItemUnico('users', usuario);
+            if (!sucesso) { exibirToast('Não foi possível atualizar o utilizador. Verifique a ligação e as regras.', 'danger'); return; }
+            users[userIndex] = { ...users[userIndex], ...usuario };
             carregarTabelaUsuarios();
-            bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
-            exibirToast('Usuário salvo com sucesso!', 'success');
-            // AUDITORIA
-            const operacaoUser = originalUsername ? 'EDITAR' : 'CRIAR';
-            await AuditoriaLogs.registrar(operacaoUser, 'USUARIO', `${operacaoUser === 'EDITAR' ? 'Editado' : 'Criado'} usuário: ${username} (${role})`, null, { username, role });
+            bootstrap.Modal.getInstance(document.getElementById('modalUsuario'))?.hide();
+            exibirToast('Utilizador atualizado com sucesso.', 'success');
         }
 
         function editarUsuario(username) {
@@ -2970,7 +2970,7 @@
             if (user) {
                 document.getElementById('usuarioId').value = user.username;
                 document.getElementById('nomeUsuario').value = user.username;
-                document.getElementById('senhaUsuario').value = user.password;
+                document.getElementById('senhaUsuario').value = '';
                 document.getElementById('funcaoUsuario').value = user.role;
                 document.getElementById('modalUsuarioTitulo').textContent = 'Editar Usuario';
                 new bootstrap.Modal(document.getElementById('modalUsuario')).show();
@@ -3034,7 +3034,7 @@
             }
         }
 
-        function carregarDadosIniciais() {
+        async function carregarDadosIniciais() {
             carregarImoveisSelects();
             carregarLocalidades();
             carregarUnidades();
@@ -3059,7 +3059,7 @@
             configurarRestricaoDataBaixa();
             atualizarDashboard();
             carregarSelectsExtras();
-            inicializarPermissoes();
+            await inicializarPermissoes();
             configurarSeletoresInteligentesMobile();
         }
 
@@ -3894,7 +3894,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             }
         }
 
-        function aplicarFiltrosRelatorios() { const localId = document.getElementById('relatorioLocalidade').value, unidadeId = document.getElementById('relatorioUnidade').value; alert(`Filtros aplicados para geração dos relatórios.`); }
+        function aplicarFiltrosRelatorios() { const local = document.getElementById('modalRelLocalidade'), unidade = document.getElementById('modalRelUnidade'); if (!local || !unidade) { exibirToast('Filtros de relatório indisponíveis.', 'danger'); return; } exibirToast('Filtros aplicados para geração dos relatórios.', 'success'); }
 
         function toggleDarkMode() {
             const body = document.body;
@@ -4494,13 +4494,13 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
         }
         function configurarFiltrosCadastros() { garantirModalFiltroCadastro(); configuracaoFiltrosCadastros.forEach(config => renderizarCabecalhoFiltrosCadastro(config.chave)); }
 
-        function carregarTabelaEspecies() { const t = document.getElementById('tabelaEspecies'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('especies', especies), 'especies'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhuma espécie cadastrada.</td></tr>'; } else { html = pag.dados.map(e => `<tr><td>${e.id}</td><td>${e.nome}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarEspecie(${e.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirEspecie(${e.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'especies', pag.totalPaginas); }
+        function carregarTabelaEspecies() { const t = document.getElementById('tabelaEspecies'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('especies', especies), 'especies'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhuma espécie cadastrada.</td></tr>'; } else { html = pag.dados.map(e => `<tr><td>${escaparHtmlSeguro(e.id)}</td><td>${escaparHtmlSeguro(e.nome)}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarEspecie(${e.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirEspecie(${e.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'especies', pag.totalPaginas); }
 
         function carregarTabelaGerenciais() { const t = document.getElementById('tabelaGerenciais'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('gerenciais', gerenciais), 'gerenciais'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhum gerencial cadastrado.</td></tr>'; } else { html = pag.dados.map(g => `<tr ondblclick="editarGerencial(${g.id})" title="Duplo clique para alterar o ID"><td>${escaparHtmlSeguro(g.id)}</td><td>${escaparHtmlSeguro(g.nome)}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarGerencial(${g.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirGerencial(${g.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'gerenciais', pag.totalPaginas); }
 
-        function carregarTabelaContasPatrimoniais() { const t = document.getElementById('tabelaContasPatrimoniais'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('contasPatrimoniais', contasPatrimoniais), 'contasPatrimoniais'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="4" class="text-center text-muted">Nenhuma conta patrimonial cadastrada.</td></tr>'; } else { html = pag.dados.map(c => `<tr><td>${c.id}</td><td>${c.nome}</td><td>${c.vidaUtil || '-'}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarContaPatrimonial(${c.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirContaPatrimonial(${c.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'contasPatrimoniais', pag.totalPaginas); }
+        function carregarTabelaContasPatrimoniais() { const t = document.getElementById('tabelaContasPatrimoniais'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('contasPatrimoniais', contasPatrimoniais), 'contasPatrimoniais'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="4" class="text-center text-muted">Nenhuma conta patrimonial cadastrada.</td></tr>'; } else { html = pag.dados.map(c => `<tr><td>${escaparHtmlSeguro(c.id)}</td><td>${escaparHtmlSeguro(c.nome)}</td><td>${escaparHtmlSeguro(c.vidaUtil || '-')}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarContaPatrimonial(${c.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirContaPatrimonial(${c.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'contasPatrimoniais', pag.totalPaginas); }
 
-        function carregarImoveisTabela() { const t = document.getElementById('tabelaImoveis'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('imoveis', imoveis), 'imoveis'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhum imóvel cadastrado.</td></tr>'; } else { html = pag.dados.map(i => `<tr><td>${i.id}</td><td>${i.nome}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarImovel(${i.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirImovel(${i.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'imoveis', pag.totalPaginas); }
+        function carregarImoveisTabela() { const t = document.getElementById('tabelaImoveis'); if (!t) return; const pag = calcularPaginacao(filtrarCadastro('imoveis', imoveis), 'imoveis'); let html = ''; if (pag.dados.length === 0) { html = '<tr><td colspan="3" class="text-center text-muted">Nenhum imóvel cadastrado.</td></tr>'; } else { html = pag.dados.map(i => `<tr><td>${escaparHtmlSeguro(i.id)}</td><td>${escaparHtmlSeguro(i.nome)}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarImovel(${i.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirImovel(${i.id})"><i class="bi bi-trash"></i></button></td></tr>`).join(''); } t.innerHTML = html; atualizarControlesPaginacao(t, 'imoveis', pag.totalPaginas); }
 
         function carregarUnidadesTabela() {
             const t = document.getElementById('tabelaUnidades');
@@ -4529,7 +4529,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             if (pag.dados.length === 0) {
                 html = '<tr><td colspan="3" class="text-center text-muted">Nenhum tipo de controle cadastrado.</td></tr>';
             } else {
-                html = pag.dados.map(tc => `<tr><td>${tc.id}</td><td>${tc.nome}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarTipoControle(${tc.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirTipoControle(${tc.id})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                html = pag.dados.map(tc => `<tr><td>${escaparHtmlSeguro(tc.id)}</td><td>${escaparHtmlSeguro(tc.nome)}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editarTipoControle(${tc.id})"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-outline-danger" onclick="excluirTipoControle(${tc.id})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
             }
             t.innerHTML = html;
             atualizarControlesPaginacao(t, 'tiposControle', pag.totalPaginas);
@@ -4635,7 +4635,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
 }
 
         function imprimirAdesivoPequenoQrCode(unidadeNome, unidadeId, qrCodeUrl) {
-    const printWindow = window.open('', '', 'height=400,width=400');
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,height=400,width=400'); if (!printWindow) { exibirToast('Permita pop-ups para imprimir o QR Code.', 'warning'); return; }
     printWindow.document.write(`
         <html><head><title>Adesivo QR Code - ${unidadeNome}</title>
         <style>*{margin:0;padding:0}body{width:21cm;height:29.7cm;display:flex;flex-direction:column;justify-content:center;align-items:center;background:white;font-family:Arial,sans-serif}.adesivo{width:3.5cm;height:3.5cm;display:flex;flex-direction:column;justify-content:center;align-items:center;border:1px dashed #999;padding:0.1cm;box-sizing:border-box;page-break-inside:avoid}img{width:2.4cm;height:2.4cm;margin:0.1cm}.codigo{font-size:7pt;text-align:center;font-weight:bold;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000}.info{font-size:6pt;text-align:center;color:#666;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:bold;}.grid{display:grid;grid-template-columns:repeat(5,3.5cm);gap:0.5cm;padding:0.5cm}@media print{body{margin:0;padding:0}.grid{page-break-after:always}}</style>
@@ -4648,7 +4648,7 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
 }
 
 function imprimirQrCodeUnidade(unidadeNome, unidadeId, qrCodeUrl) {
-    const printWindow = window.open('', '', 'height=600,width=600');
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,height=600,width=600'); if (!printWindow) { exibirToast('Permita pop-ups para imprimir o QR Code.', 'warning'); return; }
     printWindow.document.write(`
         <html><head><title>QR Code - ${unidadeNome}</title>
         <style>body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5;font-family:Arial,sans-serif}.container{background:white;padding:40px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);text-align:center}h2{margin:0 0 10px 0;color:#333}p{color:#666;font-size:14px;margin:5px 0}img{max-width:400px;border:3px solid #ddd;padding:15px;border-radius:8px;margin:20px 0}.info{font-family:monospace;font-size:18px;font-weight:bold;color:#2563eb;margin:10px 0}</style>
@@ -4719,7 +4719,7 @@ function imprimirQrCodeUnidade(unidadeNome, unidadeId, qrCodeUrl) {
                 `;
             }
 
-            const printWindow = window.open('', '', 'height=600,width=800');
+            const printWindow = window.open('', '_blank', 'noopener,noreferrer,height=600,width=800'); if (!printWindow) { exibirToast('Permita pop-ups para imprimir os QR Codes.', 'warning'); esconderLoading(); return; }
             printWindow.document.write(`
                 <html><head><title>Impressão em Lote - QR Codes das Unidades</title>
                 <style>
@@ -5229,7 +5229,7 @@ function verificarRelatorioViaUrl() {
                 sel.innerHTML = '<option value="">Selecione</option>';
                 const tiposOrdenados = [...tiposControle].sort((a, b) => a.nome.localeCompare(b.nome));
                 tiposOrdenados.forEach(tc => {
-                    sel.innerHTML += `<option value="${tc.nome}">${tc.nome}</option>`;
+                    sel.innerHTML += `<option value="${escaparHtmlSeguro(tc.nome)}">${escaparHtmlSeguro(tc.nome)}</option>`;
                 });
                 if (valorAtual && tiposControle.some(tc => tc.nome === valorAtual)) {
                     sel.value = valorAtual;
@@ -6719,7 +6719,7 @@ function verificarRelatorioViaUrl() {
             
             if (base64) {
                 const pdfWindow = window.open("");
-                pdfWindow.document.write(`<iframe width='100%' height='100%' style='border:none;' src='${remessa.arquivoNfBase64}'></iframe>`);
+                pdfWindow.document.write(`<iframe width='100%' height='100%' style='border:none;' src='${base64}'></iframe>`);
             } else {
                 exibirToast('Nenhum PDF anexado a esta remessa.', 'warning');
             }
@@ -7484,7 +7484,7 @@ function verificarRelatorioViaUrl() {
                                     carregarBens();
                                     atualizarDashboard();
                                     evento.target.value = '';
-                                    salvarTodosOsDadosFirebase(true);
+                                    salvarTodosOsDadosFirebase(true, ['bens']).then(sucesso => { if (!sucesso) { carregarDadosFirebase(); exibirToastTopo('A importação não pôde ser gravada no servidor; os dados locais foram revertidos.', 'danger'); } });
                                     if (erros.length > 0) {
                                         window.relatorioErrosImportacaoAtual = errosDetalhados;
                                         document.getElementById('errosImportacaoCriados').textContent = bensCriados;
@@ -7592,7 +7592,8 @@ function verificarRelatorioViaUrl() {
         // FUNÇÕES DE CONSULTA INDIVIDUAL
         // ================================================================
         function realizarConsultaBem() {
-            const input = document.getElementById('consultaPlaquetaInput');
+            const input = document.getElementById('consultaPlaquetaInput') || document.getElementById('filtroCodigoConsulta');
+            if (!input) { exibirToast('Campo de consulta indisponível.', 'danger'); return; }
             const codigo = input.value.trim();
             if (!codigo) { exibirToast('Por favor, informe a plaqueta.', 'warning'); return; }
             const bem = bens.find(b => b.codigo.toLowerCase() === codigo.toLowerCase());
@@ -7879,9 +7880,17 @@ function verificarRelatorioViaUrl() {
                     cont++;
                 }
             });
-            if (itensParaSalvar.length > 0) { 
+            if (itensParaSalvar.length > 0) {
+                const falhas = [];
                 for (const bem of itensParaSalvar) {
-                    await salvarItemUnico('bens', bem);
+                    if (!await salvarItemUnico('bens', bem)) falhas.push(bem.codigo);
+                }
+                if (falhas.length) {
+                    await carregarDadosFirebase();
+                    carregarBens();
+                    atualizarDashboard();
+                    exibirToastTopo(`A baixa não foi concluída para ${falhas.length} bem(ns). Os dados locais foram recarregados.`, 'danger');
+                    return false;
                 }
             }
             plaquetasParaBaixa = [];
@@ -7920,7 +7929,7 @@ function verificarRelatorioViaUrl() {
                     }
                     transaction.set(docRef, { ano: anoAtual, ultimo: novoNumero });
                 });
-            } catch (e) { console.error('Erro ao obter número PDA:', e); }
+            } catch (e) { console.error('Erro ao obter número PDA:', e); exibirToastTopo('Não foi possível reservar o número do PDA. A operação foi cancelada.', 'danger'); return null; }
             const numeroFormatado = novoNumero.toString().padStart(2, '0');
             return `${numeroFormatado}.${anoAtual}`;
         }
@@ -8005,6 +8014,7 @@ function verificarRelatorioViaUrl() {
 
             const dataBaixa = document.getElementById('dataBaixaLoteInput').value;
             const numeroPDA = await obterProximoNumeroPDA();
+            if (!numeroPDA) return;
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -8902,19 +8912,13 @@ function verificarRelatorioViaUrl() {
             }
 
             tbody.innerHTML = pag.dados.map(log => {
-                const data = new Date(log.timestamp.seconds * 1000).toLocaleString('pt-BR');
-                const descricao = log.descricao || '-';
-                const tipo = log.tipo || '-';
-                const operacao = log.operacao || '-';
-                const usuario = log.usuario || '-';
-
-                return `<tr>
-                    <td><small>${data}</small></td>
-                    <td><small>${usuario}</small></td>
-                    <td><small><span class="badge bg-info">${operacao}</span></small></td>
-                    <td><small><span class="badge bg-secondary">${tipo}</span></small></td>
-                    <td><small>${descricao}</small></td>
-                </tr>`;
+                const dataValor = log.timestamp?.seconds ? new Date(log.timestamp.seconds * 1000) : (typeof log.timestamp?.toDate === 'function' ? log.timestamp.toDate() : new Date(log.timestamp || Date.now()));
+                const data = Number.isNaN(dataValor.getTime()) ? '-' : dataValor.toLocaleString('pt-BR');
+                const descricao = escaparHtmlSeguro(log.descricao || '-');
+                const tipo = escaparHtmlSeguro(log.tipo || '-');
+                const operacao = escaparHtmlSeguro(log.operacao || '-');
+                const usuario = escaparHtmlSeguro(log.usuario || '-');
+                return `<tr><td><small>${escaparHtmlSeguro(data)}</small></td><td><small>${usuario}</small></td><td><small><span class="badge bg-info">${operacao}</span></small></td><td><small><span class="badge bg-secondary">${tipo}</span></small></td><td><small>${descricao}</small></td></tr>`;
             }).join('');
             
             atualizarControlesPaginacao(tbody, 'auditoria', pag.totalPaginas);
@@ -9046,49 +9050,6 @@ document.addEventListener('hidden.bs.modal', function () {
             abrirRelatorioBrowser(doc, `relatorio_${titulo.replace(/[\s/]/g, '_').toLowerCase()}.pdf`);
         }
 
-        function gerarRelatorioInventario() {
-            const anoAtual = new Date().getFullYear();
-            const bensAtivos = aplicarFiltrosModalRelatorio(bens.filter(b => !b.dataBaixa));
-            const inventariados = bensAtivos.filter(b => verificarInventariadoNoAno(b, anoAtual));
-            gerarRelatorioGenerico(`Bens Inventariados no Exercício ${anoAtual}`, inventariados);
-        }
-
-        function gerarRelatorioImagensPDF() {
-            const bensAtivos = aplicarFiltrosModalRelatorio(bens.filter(b => !b.dataBaixa));
-            const semImagem = bensAtivos.filter(b => !b.imagem || b.imagem.trim() === '');
-            gerarRelatorioGenerico('Listagem de Bens Sem Registro Fotográfico', semImagem);
-        }
-
-        function gerarRelatorioAvariasPDF() {
-            const bensAtivos = aplicarFiltrosModalRelatorio(bens.filter(b => !b.dataBaixa));
-            const avariados = bensAtivos.filter(b => b.estadoConservacao === 'NECESSITA DE MANUTENCAO');
-            gerarRelatorioGenerico('Listagem de Bens com Avaria (Manutenção)', avariados);
-        }
-
-        function gerarRelatorioNaoInventariados() {
-            const anoAtual = new Date().getFullYear();
-            const bensAtivos = aplicarFiltrosModalRelatorio(bens.filter(b => !b.dataBaixa));
-            const pendentes = bensAtivos.filter(b => !verificarInventariadoNoAno(b, anoAtual));
-            gerarRelatorioGenerico(`Pendências de Inventário (Não Localizados - ${anoAtual})`, pendentes);
-        }
-        
-        function gerarRelatorioBensNaoLocalizados() {
-            gerarRelatorioNaoInventariados();
-        }
-
-        function gerarRelatorioBensGerencial() {
-            const gerencialId = document.getElementById('selectRelatorioGerencial')?.value;
-            if (!gerencialId) { exibirToast('Selecione um centro de custo/gerencial.', 'warning'); return; }
-            
-            const bensAtivos = bens.filter(b => !b.dataBaixa && b.gerencialId == gerencialId);
-            const objGerencial = gerenciais.find(g => g.id == gerencialId);
-            const nomeGerencial = objGerencial ? objGerencial.nome : 'N/A';
-            
-            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalRelatorioGerencial'));
-            if(modalInstance) modalInstance.hide();
-            
-            gerarRelatorioGenerico(`Bens por Gerencial - ${nomeGerencial}`, bensAtivos);
-        }
         // ================================================================
         // RELATÓRIO DE ITENS BAIXADOS
         // ================================================================
