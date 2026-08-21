@@ -1258,9 +1258,23 @@
             <!-- INVENTARIO SECTION -->
             <!-- ============================================================ -->
             <div id="inventario-section" class="content-section">
-                <div class="inventario-header mb-4"><h3 class="header-title border-0 m-0">Inventário | Atualização em Lote</h3></div>
+                <div class="inventario-header mb-4"><h3 id="inventarioTitulo" class="header-title border-0 m-0">Inventário</h3></div>
                 <div class="card">
                     <div class="card-body p-5">
+                        <div class="border rounded p-3 mb-4">
+                            <div class="form-label fw-bold mb-2">Modo de inventário</div>
+                            <div class="d-flex flex-wrap gap-4" role="radiogroup" aria-label="Modo de inventário">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="inventarioModo" id="inventarioModoIndividual" value="individual">
+                                    <label class="form-check-label" for="inventarioModoIndividual"><i class="bi bi-person-check me-1"></i> Individual</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="inventarioModo" id="inventarioModoLote" value="lote" checked>
+                                    <label class="form-check-label" for="inventarioModoLote"><i class="bi bi-people me-1"></i> Em lote</label>
+                                </div>
+                            </div>
+                            <div id="inventarioModoDescricao" class="form-text mt-2">Em lote: adicione várias plaquetas e confirme todas de uma vez.</div>
+                        </div>
                         <div class="row mb-4">
                             <div class="col-md-6"><div class="mb-3"><label for="inventarioImovel" class="form-label campo-obrigatorio">Imóvel</label><select class="form-select" id="inventarioImovel" required><option value="">Selecionar</option></select></div></div>
                             <div class="col-md-6"><div class="mb-3"><label for="inventarioGerencial" class="form-label campo-obrigatorio">Gerencial</label><select class="form-select" id="inventarioGerencial" required><option value="">Selecionar</option></select></div></div>
@@ -1289,7 +1303,7 @@
                         <div class="plaqueta-list p-3 rounded mb-4" id="listaPlaquetas"><div class="text-center text-muted py-3 empty-plaqueta-list"><i class="bi bi-basket me-2"></i>Nenhuma plaqueta adicionada à lista</div></div>
                         <div class="d-flex justify-content-between align-items-center mt-4">
                             <button class="btn btn-outline-secondary px-4" id="btnLimparCampos"><i class="bi bi-eraser me-2"></i> Limpar Tudo</button>
-                            <button class="btn btn-success px-4 py-2 fw-bold shadow-sm" id="btnAtualizarLote"><i class="bi bi-check-lg me-2"></i> Confirmar Atualização</button>
+                            <button class="btn btn-success px-4 py-2 fw-bold shadow-sm" id="btnAtualizarLote"><i class="bi bi-check-lg me-2"></i> Confirmar Inventário</button>
                         </div>
                     </div>
                 </div>
@@ -3697,6 +3711,8 @@ document.getElementById('modalAuditoria')?.addEventListener('show.bs.modal', eve
             document.getElementById('btnAdicionarPlaqueta')?.addEventListener('click', adicionarPlaquetaLista);
             document.getElementById('inventarioPlaqueta')?.addEventListener('keypress', e => { if (e.key === 'Enter') { e.preventDefault(); adicionarPlaquetaLista(); } });
             document.getElementById('btnAtualizarLote')?.addEventListener('click', atualizarBensLote);
+            document.querySelectorAll('input[name="inventarioModo"]').forEach(input => input.addEventListener('change', atualizarModoInventarioUI));
+            atualizarModoInventarioUI();
             document.getElementById('btnLimparCampos')?.addEventListener('click', limparCamposInventario);
 
             // LIMPEZA MODAIS
@@ -5517,6 +5533,7 @@ function verificarRelatorioViaUrl() {
             bootstrap.Modal.getInstance(document.getElementById('modalBem')).hide();
             carregarBens();
             atualizarDashboard();
+            if (Array.isArray(plaquetasAdicionadas) && plaquetasAdicionadas.length > 0) atualizarListaPlaquetasUI();
             exibirToast('Bem salvo com sucesso!', 'success');
             // AUDITORIA
             const operacaoAudit = id ? 'EDITAR' : 'CRIAR';
@@ -5560,7 +5577,13 @@ function verificarRelatorioViaUrl() {
             if (bem.imagem) { document.getElementById('imagePreview').src = bem.imagem;
                 document.getElementById('imagePreview').style.display = 'block';
                 document.getElementById('btnRemoverImagem').style.display = 'block';
-                window.imagemData = bem.imagem; }
+                window.imagemData = bem.imagem;
+            } else {
+                document.getElementById('imagePreview').src = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('btnRemoverImagem').style.display = 'none';
+                window.imagemData = null;
+            }
             document.getElementById('modalBemTitulo').textContent = 'Editar Bem Patrimonial';
             new bootstrap.Modal(document.getElementById('modalBem')).show();
         }
@@ -5646,11 +5669,78 @@ function verificarRelatorioViaUrl() {
         // ================================================================
         // FUNÇÕES DE INVENTÁRIO
         // ================================================================
+        function obterModoInventario() {
+            return document.querySelector('input[name="inventarioModo"]:checked')?.value || 'lote';
+        }
+
+        function atualizarModoInventarioUI() {
+            const modo = obterModoInventario();
+            const titulo = document.getElementById('inventarioTitulo');
+            const descricao = document.getElementById('inventarioModoDescricao');
+            const inputPlaqueta = document.getElementById('inventarioPlaqueta');
+            const botaoConfirmar = document.getElementById('btnAtualizarLote');
+            if (modo === 'individual') {
+                if (plaquetasAdicionadas.length > 1) {
+                    plaquetasAdicionadas = plaquetasAdicionadas.slice(0, 1);
+                    atualizarListaPlaquetasUI();
+                    exibirToast('O modo individual permite apenas uma plaqueta na lista.', 'info');
+                }
+                if (titulo) titulo.textContent = 'Inventário | Atualização Individual';
+                if (descricao) descricao.textContent = 'Individual: selecione uma plaqueta e confirme o inventário desse bem.';
+                if (inputPlaqueta) inputPlaqueta.placeholder = 'Digite ou escaneie uma plaqueta';
+                if (botaoConfirmar) botaoConfirmar.innerHTML = '<i class="bi bi-check-lg me-2"></i> Confirmar Inventário Individual';
+            } else {
+                if (titulo) titulo.textContent = 'Inventário | Atualização em Lote';
+                if (descricao) descricao.textContent = 'Em lote: adicione várias plaquetas e confirme todas de uma vez.';
+                if (inputPlaqueta) inputPlaqueta.placeholder = 'Digite ou escaneie as plaquetas';
+                if (botaoConfirmar) botaoConfirmar.innerHTML = '<i class="bi bi-check-lg me-2"></i> Confirmar Inventário em Lote';
+            }
+        }
+
+        function obterPendenciasInventario(bem) {
+            if (!bem) return ['Bem não encontrado'];
+            const preenchido = valor => valor !== null && valor !== undefined && String(valor).trim() !== '' && String(valor).toLowerCase() !== 'nan';
+            const pendencias = [];
+            if (!preenchido(bem.codigo)) pendencias.push('Código/Plaqueta');
+            if (!preenchido(bem.nome)) pendencias.push('Nome do Bem');
+            if (!preenchido(bem.especieId)) pendencias.push('Espécie');
+            if (!preenchido(bem.imovel)) pendencias.push('Imóvel');
+            if (!preenchido(bem.localidadeId)) pendencias.push('Localidade');
+            if (!preenchido(bem.unidadeId)) pendencias.push('Unidade');
+            if (!preenchido(bem.estadoConservacao)) pendencias.push('Estado de Conservação');
+            if (!preenchido(bem.usoBem)) pendencias.push('Uso do Bem');
+            if (!preenchido(bem.tipoControle)) pendencias.push('Tipo de Controle');
+            if (!preenchido(bem.gerencialId)) pendencias.push('Gerencial');
+            if (!preenchido(bem.contaPatrimonialId)) pendencias.push('Conta Patrimonial');
+            if (!preenchido(bem.dataAquisicao)) pendencias.push('Data de Aquisição');
+            if (!preenchido(bem.dataInstalacao)) pendencias.push('Data de Instalação');
+            if (!preenchido(bem.cnpjFornecedor)) pendencias.push('CNPJ Fornecedor');
+            if (!preenchido(bem.fornecedor)) pendencias.push('Fornecedor');
+            if (!preenchido(bem.numeroNotaFiscal)) pendencias.push('Número da Nota Fiscal');
+            if (!preenchido(bem.valorAquisicao)) pendencias.push('Valor de Aquisição');
+            if (!preenchido(bem.imagem)) pendencias.push('Foto');
+            return pendencias;
+        }
+
+        function abrirCadastroParaCorrigirInventario(id) {
+            const bem = bens.find(item => item.id === id);
+            if (!bem) return;
+            editarBem(id);
+            setTimeout(() => {
+                const pendencias = obterPendenciasInventario(bem);
+                const abaId = pendencias.includes('Foto') ? 'foto-bem-tab' :
+                    (pendencias.some(campo => ['Gerencial', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'CNPJ Fornecedor', 'Fornecedor', 'Número da Nota Fiscal', 'Valor de Aquisição'].includes(campo)) ? 'controle-contabil-tab' : 'controle-fisico-tab');
+                const aba = document.getElementById(abaId);
+                if (aba) new bootstrap.Tab(aba).show();
+            }, 150);
+        }
+
         function adicionarPlaquetaLista() {
             const i = document.getElementById('inventarioPlaqueta');
             let p = i.value.trim();
             if (!p) { exibirToast('Informe o número da plaqueta.', 'warning'); return; }
             if (/^\d{1,5}$/.test(p)) { p = p.padStart(6, '0'); }
+            if (obterModoInventario() === 'individual' && plaquetasAdicionadas.length >= 1) { exibirToast('No modo individual, remova a plaqueta atual antes de adicionar outra.', 'warning'); return; }
             if (plaquetasAdicionadas.includes(p)) { exibirToast('Esta plaqueta já foi adicionada à lista.', 'warning'); return; }
             const b = bens.find(be => be.codigo === p);
             if (!b) { exibirToast('Plaqueta não encontrada no sistema!', 'danger'); return; }
@@ -5659,6 +5749,10 @@ function verificarRelatorioViaUrl() {
                 i.focus(); return; }
             plaquetasAdicionadas.push(p);
             atualizarListaPlaquetasUI();
+            const pendencias = obterPendenciasInventario(b);
+            if (pendencias.length) {
+                exibirToast(`Bem ${p} com pendências: ${pendencias.join(', ')}. Corrija pelo ícone exibido antes de confirmar o inventário.`, 'warning');
+            }
             if (b.localidadeId) {
                 const loc = localidades.find(l => l.id === b.localidadeId);
                 if (loc) {
@@ -5693,17 +5787,30 @@ function verificarRelatorioViaUrl() {
                     const loc = localidades.find(lo => lo.id === b.localidadeId) || { nome: 'N/A' },
                         uni = unidades.find(u => u.id === b.unidadeId) || { nome: 'N/A' },
                         ultimaAtualizacaoInventario = obterDataUltimaAtualizacaoInventario(b);
+                    const pendencias = obterPendenciasInventario(b);
+                    const bemBloqueado = pendencias.length > 0;
                     const alertaInventario = inventarioEstaAtrasado(b);
                     const dataInventarioTexto = ultimaAtualizacaoInventario ? formatarData(ultimaAtualizacaoInventario) : 'Ainda não inventariado';
                     const classeDataInventario = alertaInventario ? 'inventario-alerta' : 'text-info';
                     const iconeAlerta = alertaInventario ? '<i class="bi bi-exclamation-triangle-fill inventario-alerta-icon" title="Inventário com mais de um ano"></i>' : '';
-                    l.innerHTML += `<div class="plaqueta-list-item d-flex justify-content-between align-items-center p-2 mb-2 bg-white rounded border ${alertaInventario ? 'inventario-atrasado' : ''}"><div><strong>${p}</strong> - ${b.nome}<br><small class="text-muted">Local anterior: ${loc.nome} - ${uni.nome}</small><br><small class="${classeDataInventario}">${iconeAlerta}Última atualização do inventário: ${dataInventarioTexto}</small></div><button class="btn btn-sm btn-outline-danger" onclick="removerPlaqueta('${p}')"><i class="bi bi-x-lg"></i></button></div>`;
+                    const avisoPendencias = bemBloqueado ? `<div class="alert alert-warning py-1 px-2 mt-2 mb-0 small"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Inventário bloqueado.</strong> Pendências: ${pendencias.join(', ')}.</div>` : '';
+                    const acaoCorrecao = bemBloqueado ? `<button class="btn btn-sm btn-outline-warning" onclick="abrirCadastroParaCorrigirInventario(${b.id})" title="Abrir cadastro para corrigir pendências"><i class="bi bi-pencil-square"></i></button>` : '';
+                    l.innerHTML += `<div class="plaqueta-list-item p-2 mb-2 bg-white rounded border ${alertaInventario ? 'inventario-atrasado' : ''} ${bemBloqueado ? 'border-warning' : ''}"><div class="d-flex justify-content-between align-items-start gap-2"><div><strong>${p}</strong> - ${b.nome}<br><small class="text-muted">Local anterior: ${loc.nome} - ${uni.nome}</small><br><small class="${classeDataInventario}">${iconeAlerta}Última atualização do inventário: ${dataInventarioTexto}</small>${avisoPendencias}</div><div class="d-flex gap-1 flex-shrink-0">${acaoCorrecao}<button class="btn btn-sm btn-outline-danger" onclick="removerPlaqueta('${p}')" title="Remover da seleção"><i class="bi bi-x-lg"></i></button></div></div></div>`;
                 }
             });
         }
 
         async function atualizarBensLote() {
-            if (plaquetasAdicionadas.length === 0) { exibirToast('Adicione plaquetas à lista antes de confirmar.', 'warning'); return; }
+            const modo = obterModoInventario();
+            if (plaquetasAdicionadas.length === 0) { exibirToast('Adicione uma plaqueta à lista antes de confirmar.', 'warning'); return; }
+            if (modo === 'individual' && plaquetasAdicionadas.length !== 1) { exibirToast('No modo individual, selecione exatamente uma plaqueta.', 'warning'); return; }
+            const bensComPendencias = plaquetasAdicionadas.map(p => bens.find(bem => bem.codigo === p)).filter(Boolean).map(bem => ({ bem, pendencias: obterPendenciasInventario(bem) })).filter(item => item.pendencias.length > 0);
+            if (bensComPendencias.length > 0) {
+                atualizarListaPlaquetasUI();
+                const total = bensComPendencias.length;
+                exibirToast(`Inventário bloqueado: ${total} bem${total === 1 ? '' : 's'} com foto ou dados obrigatórios pendentes. Use o ícone de edição em cada item para corrigir.`, 'danger');
+                return;
+            }
             const im = document.getElementById('inventarioImovel').value;
             const uId = document.getElementById('inventarioUnidade').value;
             const lId = document.getElementById('inventarioLocalizacao').value;
@@ -5748,7 +5855,7 @@ function verificarRelatorioViaUrl() {
             }
             carregarBens();
             atualizarDashboard();
-            exibirToast(`${up} bens atualizados e contabilizados no ranking!`, 'success');
+            exibirToast(`${up} ${modo === 'individual' ? 'bem atualizado individualmente' : 'bens atualizados em lote'} e contabilizado${up === 1 ? '' : 's'} no ranking!`, 'success');
         }
 
         function limparCamposInventario(limparLista = true) {
@@ -7407,8 +7514,7 @@ function verificarRelatorioViaUrl() {
                             const codigoDoBem = celStr(linha, 0);
                             if (!codigoDoBem) { registrarErroImportacao(index + 2, '', 'Código/Plaqueta vazio.', linha); continue; }
                             const camposObrigatoriosVazios = [
-                                [1, 'Nome do Bem'], [3, 'Imóvel'], [6, 'Estado de Conservação'], [7, 'Uso do Bem'],
-                                [14, 'Data de Aquisição'], [15, 'Data de Instalação']
+                                [1, 'Nome do Bem'], [3, 'Imóvel']
                             ].filter(([indice]) => !celStr(linha, indice)).map(([, nome]) => nome);
                             if (camposObrigatoriosVazios.length) { registrarErroImportacao(index + 2, codigoDoBem, `Campos obrigatórios vazios: ${camposObrigatoriosVazios.join(', ')}.`, linha); continue; }
                             const tipoControleLinha = celStr(linha, 8).toUpperCase();
@@ -9188,7 +9294,7 @@ document.addEventListener('hidden.bs.modal', function () {
                 return;
             }
             const cabecalhos = CABECALHOS_IMPORTACAO_BENS;
-            const obrigatorias = new Set([0, 1, 2, 3, 6, 7, 8, 13, 14, 15]);
+            const obrigatorias = new Set([0, 1, 2, 3, 8, 13]);
             const ws = XLSX.utils.aoa_to_sheet([cabecalhos]);
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
             ws['!autofilter'] = { ref: `A1:S1` };
@@ -9210,10 +9316,10 @@ document.addEventListener('hidden.bs.modal', function () {
                 ['Azul claro', 'Coluna opcional na importação'],
                 [],
                 ['Colunas consideradas obrigatórias pelo importador'],
-                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Estado de Conservação', 'Uso do Bem', 'Tipo de Controle', 'Conta Patrimonial', 'Data de Aquisição', 'Data de Instalação', 'Valor de Aquisição'],
+                ['Código/Plaqueta', 'Nome do Bem', 'Espécie', 'Imóvel', 'Tipo de Controle', 'Conta Patrimonial'],
                 [],
                 ['Observações'],
-                ['Os nomes de Espécie, Tipo de Controle e Conta Patrimonial devem existir previamente no sistema. Localidade e Gerencial são opcionais; quando informados, devem existir previamente no sistema. A Unidade, se preenchida, deve pertencer à Localidade informada.'],
+                ['Os nomes de Espécie, Tipo de Controle e Conta Patrimonial devem existir previamente no sistema. Localidade e Gerencial são opcionais; quando informados, devem existir previamente no sistema. A Unidade, se preenchida, deve pertencer à Localidade informada. Estado de Conservação, Uso do Bem, Data de Aquisição e Data de Instalação também são opcionais.'],
                 ['As datas podem ser informadas como datas válidas do Excel ou no formato AAAA-MM-DD.'],
                 ['A primeira aba contém somente o cabeçalho para evitar que uma linha de exemplo seja importada como bem.']
             ];
